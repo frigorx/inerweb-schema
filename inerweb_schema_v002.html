@@ -109,9 +109,11 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',Calibri,sans-serif;
 .sym-group .pin-dot{fill:var(--orange);opacity:0;transition:.12s;cursor:crosshair}
 .sym-group:hover .pin-dot,.sym-group.selected .pin-dot{opacity:1}
 .pin-dot.connected{fill:var(--success);opacity:1}
-.wire{stroke:var(--navy);stroke-width:2.5;fill:none;cursor:pointer;stroke-linecap:round;stroke-linejoin:round}
-.wire:hover{stroke-width:4}
+.wire{stroke:var(--navy);stroke-width:2.5;fill:none;cursor:pointer;stroke-linecap:round;stroke-linejoin:round;transition:stroke .2s}
+.wire:hover{stroke-width:4.5;filter:brightness(1.3)}
 .wire.selected{stroke-dasharray:6 3}
+.wire.uncolored{stroke:#bbb;stroke-width:4;stroke-dasharray:8 4;animation:wire-pulse 2s infinite}
+@keyframes wire-pulse{0%,100%{opacity:.6}50%{opacity:1}}
 .wire-preview{stroke:var(--orange);stroke-width:2;fill:none;stroke-dasharray:4 3;opacity:.5;pointer-events:none}
 .sym-label{font-size:9px;font-family:'Segoe UI',sans-serif;fill:#888;text-anchor:middle}
 
@@ -222,22 +224,17 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',Calibri,sans-serif;
     </div>
     <div style="margin-bottom:16px">
       <label style="font-size:11px;display:block;margin-bottom:3px;opacity:.7">Classe</label>
-      <select id="login-classe" style="width:100%;padding:8px 12px;border:none;border-radius:6px;font-size:14px;font-family:inherit;background:rgba(255,255,255,.9);color:#1b3a63">
+      <select id="login-classe" style="width:100%;padding:8px 12px;border:none;border-radius:6px;font-size:14px;font-family:inherit;background:rgba(255,255,255,.9);color:#1b3a63" onchange="if(this.value==='__autre')document.getElementById('login-classe-autre').style.display='block'">
         <option value="">-- Choisis ta classe --</option>
-        <option>CAP 1 IFCA</option>
-        <option>CAP 2 IFCA</option>
+        <option>1re année CAP IFCA</option>
+        <option>2e année CAP IFCA</option>
         <option>2nde TNE</option>
-        <option>1re TNE</option>
-        <option>Tle TNE</option>
-        <option>2nde MPI</option>
         <option>1re MFER</option>
         <option>Tle MFER</option>
-        <option>1re MV</option>
-        <option>Tle MV</option>
-        <option>BTS 1 FED</option>
-        <option>BTS 2 FED</option>
-        <option>Autre</option>
+        <option>Titre Pro CVC</option>
+        <option value="__autre">Autre...</option>
       </select>
+      <input id="login-classe-autre" type="text" style="display:none;width:100%;padding:8px 12px;border:none;border-radius:6px;font-size:14px;font-family:inherit;background:rgba(255,255,255,.9);color:#1b3a63;margin-top:6px" placeholder="Écris ta filière ici">
     </div>
     <button class="splash-btn" style="width:100%;margin:0" onclick="loginAndStart()">&#127891; C'est parti !</button>
     <div style="text-align:center;margin-top:10px">
@@ -269,10 +266,12 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',Calibri,sans-serif;
       <span class="sep"></span>
       <button onclick="undo()">&#8630;</button><button onclick="redo()">&#8631;</button>
       <span class="sep"></span>
-      <button id="btn-select" class="active" onclick="setTool('select')">&#9754;</button>
+      <button id="btn-pan" onclick="setTool('pan')">&#9995; Main</button>
+      <button id="btn-select" class="active" onclick="setTool('select')">&#9754; Sélection</button>
       <button id="btn-wire" onclick="setTool('wire')">&#9889; Fil</button>
       <button id="btn-erase" onclick="setTool('erase')">&#10060;</button>
       <button id="btn-color" onclick="setTool('color')">&#127912; Colorier</button>
+      <button onclick="centerOnSchema()" title="Recentrer sur le schéma">&#127919;</button>
       <span class="sep"></span>
       <button onclick="saveSchema()">&#128190;</button>
       <button onclick="loadSchema()">&#128194;</button>
@@ -306,7 +305,10 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',Calibri,sans-serif;
   </div>
 
   <div id="color-bar">
-    <span class="lbl">Couleur :</span>
+    <span class="lbl">1. Choisis une couleur :</span>
+    <span id="color-swatches"></span>
+    <span style="font-size:11px;color:var(--navy);margin-left:12px;font-weight:600" id="color-selected">Aucune couleur</span>
+    <span style="font-size:11px;color:#888;margin-left:auto">2. Clique sur un fil gris pour le colorier</span>
   </div>
 
   <div id="footer">
@@ -791,7 +793,8 @@ function init(){
 function loginAndStart(){
   const nom=$('login-nom').value.trim().toUpperCase();
   const prenom=$('login-prenom').value.trim();
-  const classe=$('login-classe').value;
+  let classe=$('login-classe').value;
+  if(classe==='__autre'){classe=$('login-classe-autre').value.trim();if(!classe){toast('Écris ta filière !');return}}
   if(!nom||!prenom){toast('Remplis ton nom et prénom !');return}
   if(!classe){toast('Choisis ta classe !');return}
   student={nom,prenom,classe};
@@ -984,7 +987,9 @@ function openLevel(level,mode){
     setTool('select');
   }
 
-  pushHistory();renderAll();renderPanel();centerView();
+  pushHistory();renderAll();renderPanel();
+  // Auto-centrer sur le schéma après un court délai (laisse le DOM se poser)
+  setTimeout(()=>centerOnSchema(),100);
 }
 
 function loadPrebuiltSchema(schema){
@@ -1065,8 +1070,31 @@ function renderPanel(){
 
   if(curMode==='colorier'){
     const info=document.createElement('div');info.className='desc';
-    info.innerHTML='<strong>Colorie les conducteurs :</strong><br>1. Choisis une couleur dans la barre en bas<br>2. Clique sur un fil pour le colorier<br>3. Vérifie quand tu as tout colorié !';
+    info.style.cssText='background:#fef9e7;border:1px solid #f39c12;border-radius:8px;padding:12px;margin-bottom:12px';
+    info.innerHTML=`<strong style="font-size:13px">&#127912; Comment colorier :</strong><br><br>
+      <strong>Étape 1 :</strong> Choisis une couleur dans la <strong>barre en bas de l'écran</strong><br>
+      <strong>Étape 2 :</strong> Clique sur un <strong>fil gris clignotant</strong> pour lui donner cette couleur<br>
+      <strong>Étape 3 :</strong> Quand tous les fils sont coloriés, clique sur <strong>Vérifier</strong><br><br>
+      <em style="font-size:10px;color:#888">Utilise la gomme (X) pour corriger une erreur</em>`;
     body.appendChild(info);
+
+    // Show color reference
+    const ref=document.createElement('div');ref.style.cssText='margin-top:8px;font-size:11px';
+    ref.innerHTML='<strong>Rappel des couleurs :</strong>';
+    WIRE_COLORS.forEach(c=>{
+      ref.innerHTML+=`<div style="display:flex;align-items:center;gap:6px;margin:3px 0">
+        <span style="width:24px;height:5px;background:${c.color};border-radius:2px;display:inline-block;border:1px solid rgba(0,0,0,.1)"></span>
+        <span>${c.short} — ${c.label}</span></div>`;
+    });
+    body.appendChild(ref);
+
+    // Count progress
+    const total=wires.filter(w=>w.expected).length;
+    const colored=wires.filter(w=>w.expected&&w.color!==DEFAULT_WIRE).length;
+    const prog=document.createElement('div');
+    prog.style.cssText='margin-top:12px;padding:8px;background:#f0f0f0;border-radius:6px;font-size:12px;font-weight:600';
+    prog.textContent='Progression : '+colored+'/'+total+' fils coloriés';
+    body.appendChild(prog);
   }
 
   if(curMode==='cabler'){
@@ -1181,18 +1209,32 @@ function nextLevel(){
 
 // ===== COLOR BAR =====
 function buildColorBar(){
-  const bar=$('color-bar');
+  const container=$('color-swatches');
   WIRE_COLORS.forEach(c=>{
     const sw=document.createElement('div');sw.className='color-swatch';
-    sw.style.background=c.color;sw.title=c.label;
-    sw.innerHTML=`<span class="tip">${c.short}</span>`;
-    sw.onclick=()=>{activeColorId=c.id;document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));sw.classList.add('active')};
-    bar.appendChild(sw);
+    sw.style.background=c.color;sw.title=c.label+' ('+c.short+')';
+    sw.innerHTML=`<span class="tip">${c.label}</span>`;
+    sw.onclick=()=>{
+      activeColorId=c.id;
+      document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));
+      sw.classList.add('active');
+      $('color-selected').textContent=c.label;
+      $('color-selected').style.color=c.color;
+      $('st-info').textContent='Couleur : '+c.label+' — Clique sur un fil pour le colorier';
+    };
+    container.appendChild(sw);
   });
   // Eraser
-  const er=document.createElement('div');er.className='color-swatch eraser';er.title='Effacer couleur';
-  er.onclick=()=>{activeColorId='_erase';document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));er.classList.add('active')};
-  bar.appendChild(er);
+  const er=document.createElement('div');er.className='color-swatch eraser';er.title='Effacer la couleur d\'un fil';
+  er.onclick=()=>{
+    activeColorId='_erase';
+    document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));
+    er.classList.add('active');
+    $('color-selected').textContent='Gomme';
+    $('color-selected').style.color='#888';
+    $('st-info').textContent='Clique sur un fil colorié pour effacer sa couleur';
+  };
+  container.appendChild(er);
 }
 
 // ===== PALETTE =====
@@ -1248,7 +1290,9 @@ function snap(v){return Math.round(v/GRID)*GRID}
 // ===== MOUSE =====
 function onMD(e){
   const pt=c2c(e.clientX,e.clientY);
-  if(e.button===1||(e.button===0&&e.shiftKey)){panState={sx:e.clientX,sy:e.clientY,vx:viewX,vy:viewY};wrap.style.cursor='grabbing';e.preventDefault();return}
+  // Pan : bouton milieu, Shift+clic, ou outil Main
+  if(e.button===1||(e.button===0&&e.shiftKey)||((e.button===0)&&tool==='pan')){
+    panState={sx:e.clientX,sy:e.clientY,vx:viewX,vy:viewY};wrap.style.cursor='grabbing';e.preventDefault();return}
   if(e.button!==0)return;
 
   if(tool==='color'){handleColorClick(pt);return}
@@ -1304,13 +1348,16 @@ function hideInfoTip(){$('info-tip').classList.remove('on')}
 
 // ===== COLOR TOOL =====
 function handleColorClick(pt){
+  if(!activeColorId){toast('Choisis d\'abord une couleur dans la barre en bas !');return}
   const hit=hitTest(pt);
-  if(!hit||hit.type!=='wire')return;
+  if(!hit||hit.type!=='wire'){toast('Clique sur un fil pour le colorier');return}
   const w=wires.find(wr=>wr.uid===hit.uid);
   if(!w)return;
-  if(activeColorId==='_erase'){w.color=DEFAULT_WIRE}
-  else if(activeColorId){const c=WIRE_COLORS.find(x=>x.id===activeColorId);if(c)w.color=c.color}
+  if(activeColorId==='_erase'){w.color=DEFAULT_WIRE;toast('Couleur effacée')}
+  else{const c=WIRE_COLORS.find(x=>x.id===activeColorId);if(c){w.color=c.color;toast(c.label+' appliqué')}}
   renderAll();
+  // Refresh panel to update progress counter
+  if(curMode==='colorier')renderPanel();
 }
 
 // ===== HIT TEST =====
@@ -1385,7 +1432,8 @@ function renderWires(){
   wires.forEach(w=>{
     const d=w.points.map((p,i)=>(i?'L':'M')+p.x+','+p.y).join(' ');
     const color=w.color||DEFAULT_WIRE;
-    const path=mkSVG('path',{class:'wire'+(selection.has(w.uid)?' selected':''),d,stroke:color,'data-uid':w.uid});
+    const isUncolored=curMode==='colorier'&&color===DEFAULT_WIRE;
+    const path=mkSVG('path',{class:'wire'+(selection.has(w.uid)?' selected':'')+(isUncolored?' uncolored':''),d,stroke:color,'data-uid':w.uid});
     path.addEventListener('mousedown',e=>{
       if(tool==='color'){e.stopPropagation();handleColorClick(c2c(e.clientX,e.clientY));return}
       if(tool==='erase'){e.stopPropagation();wires=wires.filter(wr=>wr.uid!==w.uid);pushHistory();renderAll();return}
@@ -1404,9 +1452,36 @@ function setTool(t){
   tool=t;wireStart=null;wirePreview=null;renderOverlay();
   document.querySelectorAll('#ed-tools button[id^="btn-"]').forEach(b=>b.classList.remove('active'));
   const b=$('btn-'+t);if(b)b.classList.add('active');
-  wrap.style.cursor=t==='wire'||t==='color'?'crosshair':t==='erase'?'not-allowed':'default';
-  const nm={select:'Sélection',wire:'Fil',erase:'Gomme',color:'Colorier'};
+  wrap.style.cursor=t==='pan'?'grab':t==='wire'||t==='color'?'crosshair':t==='erase'?'not-allowed':'default';
+  const nm={select:'Sélection',wire:'Fil',erase:'Gomme',color:'Colorier',pan:'Déplacer la feuille'};
   $('st-tool').textContent=nm[t]||t;
+  if(t==='color')$('st-info').textContent='Choisis une couleur en bas, puis clique sur un fil';
+  else if(t==='pan')$('st-info').textContent='Clique et glisse pour déplacer la vue';
+}
+
+// Recentrer la vue sur les composants placés
+function centerOnSchema(){
+  if(placed.length===0){centerView();return}
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  placed.forEach(p=>{
+    const sym=allSym.find(s=>s.id===p.symId);
+    const vb=sym?parseVB(sym.svg_sans):null;
+    const hw=vb?(vb.w/2+20):40, hh=vb?(vb.h/2+20):40;
+    if(p.x-hw<minX)minX=p.x-hw; if(p.y-hh<minY)minY=p.y-hh;
+    if(p.x+hw>maxX)maxX=p.x+hw; if(p.y+hh>maxY)maxY=p.y+hh;
+  });
+  wires.forEach(w=>w.points.forEach(pt=>{
+    if(pt.x<minX)minX=pt.x;if(pt.y<minY)minY=pt.y;
+    if(pt.x>maxX)maxX=pt.x;if(pt.y>maxY)maxY=pt.y;
+  }));
+  const cw=maxX-minX+80, ch=maxY-minY+80;
+  const cx=(minX+maxX)/2, cy=(minY+maxY)/2;
+  const ww=wrap.clientWidth, wh=wrap.clientHeight;
+  zoom=Math.min(ww/cw, wh/ch, 2);
+  zoom=Math.max(ZMIN,Math.min(ZMAX,zoom));
+  viewX=ww/2 - cx*zoom;
+  viewY=wh/2 - cy*zoom;
+  updateView();
 }
 
 // ===== HISTORY =====
@@ -1426,6 +1501,8 @@ function onKey(e){
   if(e.key==='w'||e.key==='W')setTool('wire');
   if(e.key==='e'||e.key==='E')setTool('erase');
   if(e.key==='c'||e.key==='C')setTool('color');
+  if(e.key===' '||e.key==='Space'){setTool('pan');e.preventDefault()}
+  if(e.key==='f'||e.key==='F'){centerOnSchema()}
   if(e.key==='Escape'){wireStart=null;wirePreview=null;clearSel();setTool('select');renderOverlay()}
   if(e.ctrlKey&&e.key==='z'){undo();e.preventDefault()}
   if(e.ctrlKey&&(e.key==='y'||(e.shiftKey&&e.key==='Z'))){redo();e.preventDefault()}
