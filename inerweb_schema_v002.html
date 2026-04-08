@@ -126,7 +126,15 @@ html,body{height:100%;overflow:hidden;font-family:Calibri,'Segoe UI',sans-serif;
 .wire.selected~.wire-handle,.wire-handle:hover{opacity:1}
 .wire-handles-group .wire-handle{opacity:1}
 .wire-handle:hover{fill:#ff3300;r:6}
-.sym-label{font-size:9px;font-family:'Segoe UI',sans-serif;fill:#888;text-anchor:middle}
+.sym-label{font-size:10px;font-family:Calibri,sans-serif;fill:#555;text-anchor:start;font-weight:600}
+
+/* ===== FOLIO GRID ===== */
+.folio-col-line{stroke:#d0d8e0;stroke-width:.5;stroke-dasharray:2 4}
+.folio-col-num{font-size:11px;fill:#8899aa;text-anchor:middle;font-family:Calibri,sans-serif;font-weight:700}
+.folio-row-letter{font-size:11px;fill:#8899aa;text-anchor:middle;font-family:Calibri,sans-serif;font-weight:700}
+.folio-bus{stroke-width:3;stroke-linecap:round}
+.folio-bus-label{font-size:12px;font-weight:700;font-family:Calibri,sans-serif}
+.folio-border{fill:none;stroke:#8899aa;stroke-width:1.5}
 
 /* ===== RIGHT PANEL ===== */
 #panel{width:300px;background:#fff;border-left:2px solid var(--navy);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
@@ -441,25 +449,33 @@ levels:[
    desc:'Un interrupteur commande une lampe. Le disjoncteur bipolaire Q1 coupe phase ET neutre.',
    modes:['observer','colorier','cabler'],
    schema:{
-     // Q1 disjoncteur_1p_n à (250,280) : Phase=droite(260), Neutre=gauche(240)
+     folio: true, // Active la grille folio normalisée
+     // Grille folio : colonnes 1-10, rangées A-H
+     // Bus Phase L en haut (rangée A, y=FOLIO.y+35)
+     // Bus Neutre N en bas (rangée H, y=FOLIO.y+525)
+     // Q1 col 3, S1 col 3, H1 col 3 — circuit vertical colonne 3
+     // Neutre retour par la droite (col 5)
      syms:[
-       {s:'source_phase_l',   x:260, y:140, r:1, label:'Phase L'},
-       {s:'source_neutre_n',  x:240, y:140, r:1, label:'Neutre N'},
-       {s:'disjoncteur_1p_n', x:250, y:280, r:0, label:'Q1 (bipolaire)'},
-       {s:'interrupteur',     x:260, y:420, r:0, label:'S1'},
-       {s:'voyant_lumineux',  x:260, y:560, r:0, label:'H1 Lampe'},
+       // Q1 à col 3 (x=1800+3*80=2040), entre rangées B et C (y=1300+1.5*70=1405)
+       {s:'disjoncteur_1p_n', x:2040, y:1405, r:0, label:'Q1'},
+       // S1 à col 3, rangée D (y=1300+3*70=1510)
+       {s:'interrupteur',     x:2050, y:1545, r:0, label:'S1'},
+       // H1 à col 3, rangée F (y=1300+5*70=1650)
+       {s:'voyant_lumineux',  x:2050, y:1685, r:0, label:'H1'},
      ],
      wires:[
-       // Phase : source L → Q1 entrée Phase (droite, x=260)
-       {pts:[{x:260,y:150},{x:260,y:250}], expected:'phase_l1', label:'Phase L → Q1 (entrée Phase)'},
-       // Neutre : source N → Q1 entrée Neutre (gauche, x=240)
-       {pts:[{x:240,y:150},{x:240,y:250}], expected:'neutre', label:'Neutre N → Q1 (entrée Neutre)'},
-       // Q1 sortie Phase → S1
-       {pts:[{x:260,y:300},{x:260,y:399}], expected:'phase_l1', label:'Q1 (sortie Ph) → S1'},
-       // S1 → H1
-       {pts:[{x:260,y:441},{x:260,y:540}], expected:'phase_l1', label:'S1 → H1 (phase commutée)'},
-       // Q1 sortie Neutre → retour H1 bottom
-       {pts:[{x:240,y:300},{x:240,y:580},{x:260,y:580}], expected:'neutre', label:'Q1 (sortie N) → H1 retour'},
+       // Phase : bus L (y=1335) descend vers Q1 entrée Phase (x+10=2050, y-30=1375)
+       {pts:[{x:2050,y:1335},{x:2050,y:1375}], expected:'phase_l1', label:'Bus Phase → Q1 (Ph)'},
+       // Neutre : bus L neutre côté (x-10=2030) descend vers Q1 entrée N
+       {pts:[{x:2030,y:1335},{x:2030,y:1375}], expected:'neutre', label:'Bus Neutre → Q1 (N)'},
+       // Q1 sortie Phase (2050, 1425) → S1 top (2050, 1524)
+       {pts:[{x:2050,y:1425},{x:2050,y:1524}], expected:'phase_l1', label:'Q1 Ph → S1'},
+       // S1 bottom (2050, 1566) → H1 top (2050, 1665)
+       {pts:[{x:2050,y:1566},{x:2050,y:1665}], expected:'phase_l1', label:'S1 → H1'},
+       // H1 bottom (2050, 1705) → bus Neutre (y=1825)
+       {pts:[{x:2050,y:1705},{x:2050,y:1825}], expected:'neutre', label:'H1 → Bus Neutre'},
+       // Q1 sortie Neutre (2030, 1425) descend direct au bus N
+       {pts:[{x:2030,y:1425},{x:2030,y:1825}], expected:'neutre', label:'Q1 N → Bus Neutre'},
      ]
    },
    steps_cabler:[
@@ -1709,8 +1725,94 @@ function rotSel(){hideCtx();selection.forEach(uid=>{const p=placed.find(s=>s.uid
 function mirSel(){hideCtx();selection.forEach(uid=>{const p=placed.find(s=>s.uid===uid);if(p)p.mirror=!p.mirror});pushHistory();renderAll()}
 function dupSel(){hideCtx();const ns=new Set();selection.forEach(uid=>{const p=placed.find(s=>s.uid===uid);if(p){const n=uidC++;placed.push({...p,uid:n,x:p.x+GRID*2,y:p.y+GRID*2});ns.add(n)}});selection=ns;pushHistory();renderAll()}
 
+// ===== FOLIO GRID SYSTEM =====
+// Grille normalisée : colonnes numérotées, rangées lettrées
+// Bus Phase en haut, bus Neutre en bas
+const FOLIO = {
+  x: 1800, y: 1300,      // position du folio sur le canvas
+  cols: 10,               // nombre de colonnes
+  rows: 8,                // nombre de rangées
+  colW: 80,               // largeur colonne (px)
+  rowH: 70,               // hauteur rangée (px)
+  busPhY: 0,              // rangée du bus Phase (haut)
+  busNY: 7,               // rangée du bus Neutre (bas)
+};
+
+// Convertir coordonnées folio (col,row) en pixels canvas
+function folioToCanvas(col, row) {
+  return {
+    x: FOLIO.x + col * FOLIO.colW,
+    y: FOLIO.y + row * FOLIO.rowH
+  };
+}
+
+// Dessiner la grille folio
+function drawFolio(g) {
+  const f = FOLIO;
+  const w = f.cols * f.colW;
+  const h = f.rows * f.rowH;
+
+  // Fond blanc du folio
+  g.appendChild(mkSVG('rect', {
+    x: f.x - 30, y: f.y - 30, width: w + 60, height: h + 60,
+    fill: '#fff', stroke: '#8899aa', 'stroke-width': 1.5, rx: 4
+  }));
+
+  // Colonnes verticales
+  for (let c = 0; c <= f.cols; c++) {
+    const x = f.x + c * f.colW;
+    g.appendChild(mkSVG('line', { x1: x, y1: f.y - 20, x2: x, y2: f.y + h + 10, class: 'folio-col-line' }));
+    if (c < f.cols) {
+      const num = mkSVG('text', { x: x + f.colW / 2, y: f.y - 8, class: 'folio-col-num' });
+      num.textContent = c + 1;
+      g.appendChild(num);
+    }
+  }
+
+  // Rangées horizontales (lettres)
+  const letters = 'ABCDEFGHIJ';
+  for (let r = 0; r <= f.rows; r++) {
+    const y = f.y + r * f.rowH;
+    if (r > 0 && r < f.rows) {
+      g.appendChild(mkSVG('line', { x1: f.x - 20, y1: y, x2: f.x + w + 10, y2: y, class: 'folio-col-line' }));
+    }
+    if (r < f.rows) {
+      const lbl = mkSVG('text', { x: f.x - 16, y: y + f.rowH / 2 + 4, class: 'folio-row-letter' });
+      lbl.textContent = letters[r];
+      g.appendChild(lbl);
+    }
+  }
+
+  // Bus Phase (en haut, rouge)
+  const phY = f.y + f.busPhY * f.rowH + f.rowH / 2;
+  g.appendChild(mkSVG('line', {
+    x1: f.x, y1: phY, x2: f.x + w, y2: phY,
+    class: 'folio-bus', stroke: '#C0392B'
+  }));
+  const phLbl = mkSVG('text', { x: f.x - 6, y: phY + 4, class: 'folio-bus-label', fill: '#C0392B', 'text-anchor': 'end' });
+  phLbl.textContent = 'L';
+  g.appendChild(phLbl);
+
+  // Bus Neutre (en bas, bleu)
+  const nY = f.y + f.busNY * f.rowH + f.rowH / 2;
+  g.appendChild(mkSVG('line', {
+    x1: f.x, y1: nY, x2: f.x + w, y2: nY,
+    class: 'folio-bus', stroke: '#2471A3'
+  }));
+  const nLbl = mkSVG('text', { x: f.x - 6, y: nY + 4, class: 'folio-bus-label', fill: '#2471A3', 'text-anchor': 'end' });
+  nLbl.textContent = 'N';
+  g.appendChild(nLbl);
+}
+
 // ===== RENDER =====
-function renderAll(){renderSymbols();renderWires();renderOverlay()}
+function renderAll(){
+  // Draw folio grid for pre-built schemas
+  if ((curMode === 'observer' || curMode === 'colorier') && curLevel?.schema?.folio) {
+    const gridLayer = document.getElementById('grid-layer');
+    if (gridLayer) { gridLayer.innerHTML = ''; drawFolio(gridLayer); }
+  }
+  renderSymbols(); renderWires(); renderOverlay();
+}
 function renderSymbols(){
   const g=document.getElementById('symbol-layer');if(!g)return;g.innerHTML='';
   placed.forEach(p=>{
