@@ -374,15 +374,12 @@ const FAM_FR={sources:"Sources",contacts:"Contacts",bobines:"Bobines & Tempos",c
 
 // ===== WIRE COLORS =====
 const WIRE_COLORS = [
-  {id:'phase_l1',  label:'Phase L1',    color:'#8B4513', short:'L1'},
-  {id:'phase_l2',  label:'Phase L2',    color:'#222',    short:'L2'},
-  {id:'phase_l3',  label:'Phase L3',    color:'#808080', short:'L3'},
-  {id:'neutre',    label:'Neutre (N)',   color:'#2980b9', short:'N'},
-  {id:'pe',        label:'Terre (PE)',   color:'#27ae60', short:'PE'},
-  {id:'cmd_24v',   label:'Commande 24V', color:'#e74c3c', short:'24V'},
-  {id:'cmd_retour',label:'Retour bobine',color:'#3498db', short:'Ret'},
-  {id:'navette',   label:'Navette',      color:'#9b59b6', short:'Nav'},
-  {id:'neutre_cmd',label:'Neutre cmd',   color:'#2980b9', short:'N cmd'},
+  {id:'phase_l1',  label:'Phase (rouge/marron)',color:'#C0392B', short:'Phase'},
+  {id:'phase_l2',  label:'Phase L2 (noir)',  color:'#222',    short:'L2'},
+  {id:'phase_l3',  label:'Phase L3 (gris)',  color:'#7F8C8D', short:'L3'},
+  {id:'neutre',    label:'Neutre (bleu)',    color:'#2471A3', short:'N'},
+  {id:'pe',        label:'Terre (vert)',     color:'#27ae60', short:'PE'},
+  {id:'navette',   label:'Navette (orange)', color:'#E67E22', short:'Nav'},
 ];
 const DEFAULT_WIRE = '#1b3a63';
 
@@ -479,30 +476,34 @@ levels:[
    ]
   },
   {id:'L02',titre:'Double allumage',diff:'facile',xp:50,
-   desc:'Deux interrupteurs commandent chacun une lampe. Q1 bipolaire coupe phase+neutre.',
+   desc:'Deux interrupteurs commandent chacun une lampe. Q1 bipolaire. Pas de croisement.',
    modes:['observer','colorier','cabler'],
    schema:{
-     // Q1 à (300,280) : Phase=310, Neutre=290
+     // Layout : neutre à DROITE pour éviter croisements
+     // Q1 à (300,280) : Phase=310(droite), Neutre=290(gauche)
+     // On met S1/H1 à gauche (côté phase sortie), S2/H2 au centre
+     // Le neutre descend à droite sans croiser
      syms:[
        {s:'source_phase_l',   x:310, y:140, r:1, label:'Phase L'},
        {s:'source_neutre_n',  x:290, y:140, r:1, label:'Neutre N'},
-       {s:'disjoncteur_1p_n', x:300, y:280, r:0, label:'Q1 (bipolaire)'},
+       {s:'disjoncteur_1p_n', x:300, y:280, r:0, label:'Q1'},
        {s:'interrupteur',     x:200, y:420, r:0, label:'S1'},
-       {s:'interrupteur',     x:420, y:420, r:0, label:'S2'},
+       {s:'interrupteur',     x:400, y:420, r:0, label:'S2'},
        {s:'voyant_lumineux',  x:200, y:560, r:0, label:'H1'},
-       {s:'voyant_lumineux',  x:420, y:560, r:0, label:'H2'},
+       {s:'voyant_lumineux',  x:400, y:560, r:0, label:'H2'},
      ],
      wires:[
-       {pts:[{x:310,y:150},{x:310,y:250}],expected:'phase_l1',label:'Phase L → Q1 (entrée Ph)'},
-       {pts:[{x:290,y:150},{x:290,y:250}],expected:'neutre',label:'Neutre N → Q1 (entrée N)'},
-       {pts:[{x:310,y:300},{x:310,y:360}],expected:'phase_l1',label:'Q1 sortie Ph → noeud'},
+       {pts:[{x:310,y:150},{x:310,y:250}],expected:'phase_l1',label:'Phase L → Q1'},
+       {pts:[{x:290,y:150},{x:290,y:250}],expected:'neutre',label:'Neutre N → Q1'},
+       // Phase sort à droite (310) → va vers la gauche → S1 et S2
+       {pts:[{x:310,y:300},{x:310,y:360}],expected:'phase_l1',label:'Q1 Ph → noeud'},
        {pts:[{x:310,y:360},{x:200,y:360},{x:200,y:399}],expected:'phase_l1',label:'Noeud → S1'},
-       {pts:[{x:310,y:360},{x:420,y:360},{x:420,y:399}],expected:'phase_l1',label:'Noeud → S2'},
+       {pts:[{x:310,y:360},{x:400,y:360},{x:400,y:399}],expected:'phase_l1',label:'Noeud → S2'},
        {pts:[{x:200,y:441},{x:200,y:540}],expected:'phase_l1',label:'S1 → H1'},
-       {pts:[{x:420,y:441},{x:420,y:540}],expected:'phase_l1',label:'S2 → H2'},
-       {pts:[{x:290,y:300},{x:290,y:620}],expected:'neutre',label:'Q1 sortie N → rail neutre'},
-       {pts:[{x:200,y:580},{x:200,y:620},{x:290,y:620}],expected:'neutre',label:'H1 → neutre'},
-       {pts:[{x:420,y:580},{x:420,y:620},{x:290,y:620}],expected:'neutre',label:'H2 → neutre'},
+       {pts:[{x:400,y:441},{x:400,y:540}],expected:'phase_l1',label:'S2 → H2'},
+       // Neutre descend à gauche (290) puis rail horizontal en bas SANS croiser
+       {pts:[{x:290,y:300},{x:290,y:620},{x:200,y:620},{x:200,y:580}],expected:'neutre',label:'Q1 N → H1'},
+       {pts:[{x:290,y:620},{x:400,y:620},{x:400,y:580}],expected:'neutre',label:'Q1 N → H2'},
      ]
    },
    steps_cabler:[
@@ -514,31 +515,34 @@ levels:[
    hint:'Les 2 circuits S1-H1 et S2-H2 sont en parallèle après le disjoncteur.',
   },
   {id:'L03',titre:'Va-et-vient',diff:'facile',xp:60,
-   desc:'Commander une lampe depuis 2 endroits. Q1 bipolaire, 2 inverseurs, navettes.',
+   desc:'2 inverseurs tête-bêche reliés par 2 navettes. Q1 bipolaire. Pas de croisement.',
    modes:['observer','colorier','cabler'],
    schema:{
-     // Q1 à (250,280) : Phase=260, Neutre=240
-     // va_et_vient: commun=(x+10,y-30), nav1=(x,y+10), nav2=(x+20,y+10)
+     // S1 normal (rot=0): commun en haut (10,-30), navettes en bas (0,10)(20,10)
+     // S2 retourné (rot=2): commun en bas, navettes en haut → TÊTE-BÊCHE
+     //   rot=2 pour (10,-30): new=(-10,30) → commun en bas
+     //   rot=2 pour (0,10): new=(0,-10) → navette en haut
+     //   rot=2 pour (20,10): new=(-20,-10) → navette en haut
      syms:[
-       {s:'source_phase_l',   x:260, y:140, r:1, label:'Phase L'},
-       {s:'source_neutre_n',  x:240, y:140, r:1, label:'Neutre N'},
-       {s:'disjoncteur_1p_n', x:250, y:280, r:0, label:'Q1 (bipolaire)'},
-       {s:'va_et_vient',      x:200, y:440, r:0, label:'S1 (inverseur)'},
-       {s:'va_et_vient',      x:380, y:440, r:0, label:'S2 (inverseur)'},
-       {s:'voyant_lumineux',  x:390, y:600, r:0, label:'H1 Lampe'},
+       {s:'source_phase_l',   x:260, y:120, r:1, label:'Phase L'},
+       {s:'source_neutre_n',  x:240, y:120, r:1, label:'Neutre N'},
+       {s:'disjoncteur_1p_n', x:250, y:240, r:0, label:'Q1'},
+       {s:'va_et_vient',      x:200, y:400, r:0, label:'S1'},
+       {s:'va_et_vient',      x:380, y:400, r:2, label:'S2'},
+       {s:'voyant_lumineux',  x:370, y:560, r:0, label:'H1 Lampe'},
      ],
      wires:[
-       {pts:[{x:260,y:150},{x:260,y:250}],expected:'phase_l1',label:'Phase L → Q1 (entrée Ph)'},
-       {pts:[{x:240,y:150},{x:240,y:250}],expected:'neutre',label:'Neutre N → Q1 (entrée N)'},
-       // Q1 sortie Ph (260,300) → commun S1 (210,410)
-       {pts:[{x:260,y:300},{x:260,y:380},{x:210,y:380},{x:210,y:410}],expected:'phase_l1',label:'Q1 Ph → commun S1'},
-       // Navettes S1↔S2
-       {pts:[{x:200,y:450},{x:380,y:450}],expected:'navette',label:'Navette 1 (S1↔S2)'},
-       {pts:[{x:220,y:450},{x:220,y:480},{x:400,y:480},{x:400,y:450}],expected:'navette',label:'Navette 2 (S1↔S2)'},
-       // Commun S2 (390,410) → H1 top (390,580)
-       {pts:[{x:390,y:410},{x:390,y:580}],expected:'phase_l1',label:'Commun S2 → H1'},
-       // Q1 sortie N (240,300) → H1 bottom (390,620)
-       {pts:[{x:240,y:300},{x:240,y:660},{x:390,y:660},{x:390,y:620}],expected:'neutre',label:'Q1 N → H1 retour neutre'},
+       {pts:[{x:260,y:130},{x:260,y:210}],expected:'phase_l1',label:'Phase L → Q1'},
+       {pts:[{x:240,y:130},{x:240,y:210}],expected:'neutre',label:'Neutre N → Q1'},
+       // Q1 Ph → commun S1 (en haut: 210, 370)
+       {pts:[{x:260,y:260},{x:260,y:340},{x:210,y:340},{x:210,y:370}],expected:'phase_l1',label:'Q1 Ph → commun S1'},
+       // Navettes (S1 navettes en bas: (200,410)(220,410) → S2 navettes en haut rot=2: (380,390)(360,390))
+       {pts:[{x:200,y:410},{x:200,y:430},{x:360,y:430},{x:360,y:390}],expected:'navette',label:'Navette 1'},
+       {pts:[{x:220,y:410},{x:220,y:450},{x:380,y:450},{x:380,y:390}],expected:'navette',label:'Navette 2'},
+       // Commun S2 (rot=2: (370,430)) → H1 top (370,540)
+       {pts:[{x:370,y:430},{x:370,y:540}],expected:'phase_l1',label:'Commun S2 → H1'},
+       // Neutre : Q1 N → H1 (sans croisement, descend à gauche)
+       {pts:[{x:240,y:260},{x:240,y:600},{x:370,y:600},{x:370,y:580}],expected:'neutre',label:'Q1 N → H1 neutre'},
      ]
    },
    steps_cabler:[
@@ -578,10 +582,10 @@ levels:[
        {pts:[{x:310,y:340},{x:310,y:379}],expected:'phase_l1',label:'Noeud → S2'},
        {pts:[{x:310,y:340},{x:420,y:340},{x:420,y:379}],expected:'phase_l1',label:'Noeud → S3'},
        // 3 BP → noeud commun → bobine
-       {pts:[{x:200,y:421},{x:200,y:500},{x:310,y:500}],expected:'cmd_24v',label:'S1 → noeud bobine'},
-       {pts:[{x:310,y:421},{x:310,y:500}],expected:'cmd_24v',label:'S2 → noeud bobine'},
-       {pts:[{x:420,y:421},{x:420,y:500},{x:310,y:500}],expected:'cmd_24v',label:'S3 → noeud bobine'},
-       {pts:[{x:310,y:500},{x:310,y:520}],expected:'cmd_24v',label:'Noeud → bobine TE1'},
+       {pts:[{x:200,y:421},{x:200,y:500},{x:310,y:500}],expected:'phase_l1',label:'S1 → noeud bobine'},
+       {pts:[{x:310,y:421},{x:310,y:500}],expected:'phase_l1',label:'S2 → noeud bobine'},
+       {pts:[{x:420,y:421},{x:420,y:500},{x:310,y:500}],expected:'phase_l1',label:'S3 → noeud bobine'},
+       {pts:[{x:310,y:500},{x:310,y:520}],expected:'phase_l1',label:'Noeud → bobine TE1'},
        // Circuit puissance : Phase → contact TE1 → H1
        {pts:[{x:310,y:340},{x:120,y:340},{x:120,y:620},{x:160,y:620}],expected:'phase_l1',label:'Phase → contact TE1'},
        {pts:[{x:160,y:660},{x:160,y:760}],expected:'phase_l1',label:'Contact TE1 → H1'},
@@ -621,21 +625,21 @@ levels:[
      ],
      wires:[
        // 24V → Q2
-       {pts:[{x:200,y:150},{x:200,y:230}],expected:'cmd_24v',label:'24V → Q2'},
+       {pts:[{x:200,y:150},{x:200,y:230}],expected:'phase_l1',label:'24V → Q2'},
        // Q2 → S1 arrêt
-       {pts:[{x:200,y:280},{x:200,y:379}],expected:'cmd_24v',label:'Q2 → S1 (NF)'},
+       {pts:[{x:200,y:280},{x:200,y:379}],expected:'phase_l1',label:'Q2 → S1 (NF)'},
        // S1 → noeud avant S2 et auto-maintien
-       {pts:[{x:200,y:421},{x:200,y:480}],expected:'cmd_24v',label:'S1 → noeud'},
+       {pts:[{x:200,y:421},{x:200,y:480}],expected:'phase_l1',label:'S1 → noeud'},
        // Noeud → S2 marche
-       {pts:[{x:200,y:480},{x:200,y:519}],expected:'cmd_24v',label:'Noeud → S2 (NO)'},
+       {pts:[{x:200,y:480},{x:200,y:519}],expected:'phase_l1',label:'Noeud → S2 (NO)'},
        // Noeud → contact auto-maintien KA1 (13-14) haut
-       {pts:[{x:200,y:480},{x:320,y:480},{x:320,y:510}],expected:'cmd_24v',label:'Noeud → KA1(13-14)'},
+       {pts:[{x:200,y:480},{x:320,y:480},{x:320,y:510}],expected:'phase_l1',label:'Noeud → KA1(13-14)'},
        // S2 sortie → bobine KA1
-       {pts:[{x:200,y:561},{x:200,y:680}],expected:'cmd_24v',label:'S2 → bobine KA1'},
+       {pts:[{x:200,y:561},{x:200,y:680}],expected:'phase_l1',label:'S2 → bobine KA1'},
        // KA1(13-14) sortie → rejoint fil bobine
-       {pts:[{x:320,y:570},{x:320,y:680},{x:220,y:680}],expected:'cmd_24v',label:'KA1(13-14) → bobine'},
+       {pts:[{x:320,y:570},{x:320,y:680},{x:220,y:680}],expected:'phase_l1',label:'KA1(13-14) → bobine'},
        // Neutre retour bobine → 0V
-       {pts:[{x:200,y:720},{x:200,y:760},{x:440,y:760},{x:440,y:150}],expected:'neutre_cmd',label:'Retour neutre commande'},
+       {pts:[{x:200,y:720},{x:200,y:760},{x:440,y:760},{x:440,y:150}],expected:'neutre',label:'Retour neutre commande'},
      ]
    },
    steps_cabler:[
@@ -709,15 +713,15 @@ levels:[
        {s:'voyant_vert',x:360,y:680,r:0,label:'H1'},
      ],
      wires:[
-       {pts:[{x:200,y:240},{x:200,y:310}],expected:'cmd_24v',label:'24V→Q2'},
-       {pts:[{x:200,y:370},{x:200,y:440}],expected:'cmd_24v',label:'Q2→S1'},
-       {pts:[{x:200,y:480},{x:200,y:540}],expected:'cmd_24v',label:'S1→S2'},
-       {pts:[{x:300,y:530},{x:300,y:500},{x:200,y:500}],expected:'cmd_24v',label:'Auto-maintien haut'},
-       {pts:[{x:200,y:580},{x:200,y:660}],expected:'cmd_24v',label:'S2→bobine KM1'},
-       {pts:[{x:300,y:590},{x:300,y:660},{x:220,y:660}],expected:'cmd_24v',label:'KM1(13-14)→bobine'},
-       {pts:[{x:300,y:660},{x:360,y:660}],expected:'cmd_24v',label:'→H1'},
-       {pts:[{x:200,y:700},{x:200,y:740},{x:360,y:740},{x:360,y:700}],expected:'neutre_cmd',label:'Neutre commande'},
-       {pts:[{x:360,y:740},{x:420,y:740},{x:420,y:200},{x:220,y:200}],expected:'neutre_cmd',label:'Retour transfo'},
+       {pts:[{x:200,y:240},{x:200,y:310}],expected:'phase_l1',label:'24V→Q2'},
+       {pts:[{x:200,y:370},{x:200,y:440}],expected:'phase_l1',label:'Q2→S1'},
+       {pts:[{x:200,y:480},{x:200,y:540}],expected:'phase_l1',label:'S1→S2'},
+       {pts:[{x:300,y:530},{x:300,y:500},{x:200,y:500}],expected:'phase_l1',label:'Auto-maintien haut'},
+       {pts:[{x:200,y:580},{x:200,y:660}],expected:'phase_l1',label:'S2→bobine KM1'},
+       {pts:[{x:300,y:590},{x:300,y:660},{x:220,y:660}],expected:'phase_l1',label:'KM1(13-14)→bobine'},
+       {pts:[{x:300,y:660},{x:360,y:660}],expected:'phase_l1',label:'→H1'},
+       {pts:[{x:200,y:700},{x:200,y:740},{x:360,y:740},{x:360,y:700}],expected:'neutre',label:'Neutre commande'},
+       {pts:[{x:360,y:740},{x:420,y:740},{x:420,y:200},{x:220,y:200}],expected:'neutre',label:'Retour transfo'},
      ]
    },
    steps_cabler:[
@@ -1123,6 +1127,14 @@ function openLevel(level,mode){
     $('sidebar').classList.remove('hidden');
     $('color-bar').classList.remove('on');
     setTool('select');
+    // Filtrer la bibliothèque : ne montrer que les composants du schéma
+    if(level.schema&&level.schema.syms){
+      const needed=new Set(level.schema.syms.map(s=>s.s));
+      // Ajouter aussi les symboles de la même famille
+      const neededFams=new Set();
+      allSym.forEach(s=>{if(needed.has(s.id))neededFams.add(s.famille)});
+      filterPaletteForLevel(neededFams);
+    }
   }
 
   pushHistory();renderAll();renderPanel();
@@ -1236,6 +1248,17 @@ function renderPanel(){
   }
 
   if(curMode==='cabler'){
+    // Mini-cours intro
+    const tuto=document.createElement('div');
+    tuto.style.cssText='background:#e8f4fd;border:1px solid #2471A3;border-radius:8px;padding:12px;margin-bottom:12px;font-size:14px;line-height:1.5';
+    tuto.innerHTML=`<strong>Comment faire :</strong><br>
+      1. Cherche les composants dans la <strong>bibliothèque à gauche</strong> (seules les familles utiles sont visibles)<br>
+      2. <strong>Glisse</strong> un composant sur le plan ou <strong>double-clique</strong> dessus<br>
+      3. Appuie sur <strong>R</strong> pour tourner un composant sélectionné<br>
+      4. Clique sur une <strong>borne orange</strong> pour commencer un fil<br>
+      5. Utilise le bouton <strong>Main</strong> (&#9995;) pour déplacer la vue`;
+    body.appendChild(tuto);
+
     // Steps
     curSteps=(curLevel.steps_cabler||[]).map(s=>({...s,done:false}));
     curSteps.forEach((step,i)=>{
@@ -1402,6 +1425,27 @@ function filterPalette(){
   if(q)document.querySelectorAll('.fam-header').forEach(h=>{const it=h.nextElementSibling;if(it?.querySelector('.pal-item:not([style*="display: none"])'))h.classList.add('open');else h.classList.remove('open')});
 }
 
+// Filtrer la palette pour ne montrer que les familles nécessaires à l'exercice
+function filterPaletteForLevel(neededFams){
+  document.querySelectorAll('.fam-header').forEach(h=>{
+    const fam=h.dataset.fam;
+    const show=neededFams.has(fam);
+    h.style.display=show?'':'none';
+    const items=h.nextElementSibling;
+    if(items)items.style.display=show?'':'none';
+    if(show)h.classList.add('open');
+  });
+}
+
+// Remettre toute la palette visible
+function resetPaletteFilter(){
+  document.querySelectorAll('.fam-header').forEach(h=>{
+    h.style.display='';
+    const items=h.nextElementSibling;
+    if(items)items.style.display='';
+  });
+}
+
 // ===== CANVAS =====
 function initCanvas(){
   svg.setAttribute('width',CW);svg.setAttribute('height',CH);
@@ -1559,7 +1603,14 @@ function renderSymbols(){
     }
     // Label
     if(vb){
-      const lbl=mkSVG('text',{class:'sym-label',x:0,y:vb.y+vb.h+13,'font-size':'9'});
+      // Label sur le côté droit, pas en dessous
+      const lbl=mkSVG('text',{
+        class:'sym-label',
+        x:vb.x+vb.w+8, y:4,
+        'font-size':'10',
+        'text-anchor':'start',
+        'dominant-baseline':'middle'
+      });
       lbl.textContent=p.label||sym.nom;group.appendChild(lbl);
     }
     g.appendChild(group);
