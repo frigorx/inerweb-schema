@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>inerWeb Schéma — Apprendre par le jeu</title>
+<script src="inerweb_data.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1b3a63;--orange:#ff6b35;--bg:#f5f5f0;--grid:#e8e5dc;
+  --pin:#ff6b35;--wire:#1b3a63;--sel:#ff6b35;--hover:rgba(255,107,53,.12);
+  --success:#27ae60;--error:#e74c3c;--gold:#f1c40f;--silver:#95a5a6;
+  --star-on:#f1c40f;--star-off:#ddd;
+  --radius:10px;
+}
+html,body{height:100%;overflow:hidden;font-family:'Segoe UI',Calibri,sans-serif;background:var(--bg);color:var(--navy);-webkit-text-size-adjust:100%}
+
+/* ===== SPLASH SCREEN ===== */
+#splash{position:fixed;inset:0;background:linear-gradient(135deg,#1b3a63 0%,#2c5f9e 100%);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;transition:opacity .6s}
+#splash.hide{opacity:0;pointer-events:none}
+#splash h1{font-size:clamp(28px,5vw,42px);margin-bottom:6px;text-shadow:0 2px 8px rgba(0,0,0,.3)}
+#splash .sub{font-size:clamp(13px,2vw,16px);opacity:.7;margin-bottom:30px}
+#splash .logo{font-size:60px;margin-bottom:16px;filter:drop-shadow(0 4px 12px rgba(0,0,0,.3))}
+.splash-btn{display:inline-block;padding:14px 36px;background:var(--orange);color:#fff;border:none;border-radius:30px;font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 16px rgba(255,107,53,.4);transition:.2s;text-decoration:none;margin:6px}
+.splash-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,107,53,.5)}
+.splash-btn.sec{background:rgba(255,255,255,.15);box-shadow:none}
+.splash-btn.sec:hover{background:rgba(255,255,255,.25)}
+#splash .credit{position:absolute;bottom:16px;font-size:11px;opacity:.4}
+
+/* ===== MAIN APP ===== */
+#app{display:none;height:100vh;flex-direction:column}
+#app.on{display:flex}
+
+/* Top bar */
+#topbar{background:var(--navy);color:#fff;padding:6px 14px;display:flex;align-items:center;gap:10px;min-height:44px;flex-shrink:0}
+#topbar h1{font-size:14px;font-weight:700;white-space:nowrap}
+.badge{background:var(--orange);font-size:9px;padding:2px 7px;border-radius:3px;font-weight:700}
+.tb{display:flex;align-items:center;gap:3px;margin-left:auto}
+.tb button{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:5px;padding:5px 10px;font-size:11px;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap}
+.tb button:hover{background:rgba(255,255,255,.22)}
+.tb button.active{background:var(--orange);border-color:var(--orange)}
+.tb .sep{width:1px;height:20px;background:rgba(255,255,255,.15);margin:0 3px}
+.xp-bar{display:flex;align-items:center;gap:6px;margin-left:12px}
+.xp-bar .lvl{font-size:10px;background:var(--gold);color:var(--navy);padding:2px 8px;border-radius:10px;font-weight:700}
+.xp-bar .xp{font-size:10px;opacity:.6}
+.xp-track{width:60px;height:6px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden}
+.xp-fill{height:100%;background:var(--gold);border-radius:3px;transition:width .4s}
+
+/* ===== CONTENT ===== */
+#content{flex:1;display:flex;overflow:hidden;position:relative}
+
+/* ===== LEVELS / MAP SCREEN ===== */
+#map-screen{display:none;width:100%;height:100%;overflow-y:auto;padding:20px;background:linear-gradient(180deg,#f5f5f0 0%,#e8e5dc 100%)}
+#map-screen.on{display:block}
+.map-section{max-width:900px;margin:0 auto 30px}
+.map-section h2{font-size:18px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.map-section .desc{font-size:13px;color:#888;margin-bottom:14px}
+.level-icon{font-size:22px}
+.level-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.level-card{background:#fff;border:2px solid #e0ddd5;border-radius:var(--radius);padding:14px;cursor:pointer;transition:.2s;position:relative;overflow:hidden}
+.level-card:hover{border-color:var(--orange);transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.level-card.locked{opacity:.5;cursor:not-allowed;filter:grayscale(.3)}
+.level-card.locked:hover{transform:none;box-shadow:none;border-color:#e0ddd5}
+.level-card.completed{border-color:var(--success)}
+.level-card h4{font-size:14px;margin-bottom:4px}
+.level-card p{font-size:11px;color:#777;line-height:1.3;margin-bottom:8px}
+.level-card .stars{display:flex;gap:2px}
+.level-card .star{font-size:16px;color:var(--star-off)}
+.level-card .star.on{color:var(--star-on)}
+.level-card .lock-icon{position:absolute;top:8px;right:10px;font-size:18px;opacity:.3}
+.level-card .badge-done{position:absolute;top:8px;right:10px;background:var(--success);color:#fff;font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700}
+.diff-tag{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;display:inline-block;margin-bottom:6px}
+.diff-decouverte{background:#d5f5e3;color:#27ae60}
+.diff-facile{background:#d5f5e3;color:#27ae60}
+.diff-moyen{background:#fef9e7;color:#f39c12}
+.diff-difficile{background:#fadbd8;color:#e74c3c}
+.diff-expert{background:#e8daef;color:#8e44ad}
+
+/* ===== EDITOR SCREEN ===== */
+#editor-screen{display:none;width:100%;height:100%;flex-direction:row}
+#editor-screen.on{display:flex}
+
+/* Sidebar */
+#sidebar{width:220px;background:#fff;border-right:2px solid var(--navy);overflow-y:auto;overflow-x:hidden;flex-shrink:0}
+#pal-search{width:100%;padding:7px 10px;border:none;border-bottom:2px solid var(--navy);font-size:13px;outline:none;font-family:inherit}
+#pal-search:focus{border-color:var(--orange)}
+.fam-group{border-bottom:1px solid #eee}
+.fam-header{padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;background:#fafaf7;user-select:none}
+.fam-header:hover{background:#f0efe8}
+.fam-header .arrow{font-size:9px;transition:.2s;display:inline-block}
+.fam-header.open .arrow{transform:rotate(90deg)}
+.fam-header .cnt{margin-left:auto;font-weight:400;color:#aaa;font-size:10px}
+.fam-items{display:none;padding:4px 6px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.fam-header:not(.open)+.fam-items{display:none}
+.fam-header.open+.fam-items{display:grid}
+.pal-item{background:#fff;border:1.5px solid #ddd;border-radius:6px;padding:4px 2px 3px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:grab;transition:.15s;min-height:56px;justify-content:center}
+.pal-item:hover{border-color:var(--orange);box-shadow:0 1px 6px rgba(255,107,53,.2)}
+.pal-item:active{cursor:grabbing}
+.pal-item svg{width:32px;height:36px;overflow:visible;pointer-events:none}
+.pal-item .lbl{font-size:7.5px;text-align:center;line-height:1.1;color:#666;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pal-item.highlight{border-color:var(--orange);background:var(--hover);animation:pulse-border 1.5s infinite}
+@keyframes pulse-border{0%,100%{box-shadow:0 0 0 0 rgba(255,107,53,.3)}50%{box-shadow:0 0 0 4px rgba(255,107,53,.15)}}
+
+/* Canvas area */
+#canvas-area{flex:1;position:relative;overflow:hidden;cursor:default}
+#canvas{position:absolute;top:0;left:0}
+.grid-line{stroke:var(--grid);stroke-width:.5}
+.grid-major{stroke:#d0cdc4;stroke-width:.8}
+
+/* Symbols on canvas */
+.sym-group{cursor:move}
+.sym-group:hover .sym-bg{stroke:var(--orange);stroke-opacity:.3}
+.sym-group.selected .sym-bg{stroke:var(--orange);stroke-width:2;stroke-dasharray:4 2}
+.sym-group .pin-dot{fill:var(--pin);opacity:0;transition:.15s;cursor:crosshair}
+.sym-group:hover .pin-dot,.sym-group.selected .pin-dot{opacity:1}
+.pin-dot.connected{fill:var(--success);opacity:1}
+.pin-dot:hover{fill:var(--orange)}
+
+/* Wires */
+.wire{stroke:var(--wire);stroke-width:2;fill:none;cursor:pointer;stroke-linecap:round;stroke-linejoin:round}
+.wire:hover{stroke:var(--orange);stroke-width:3}
+.wire.selected{stroke:var(--orange);stroke-width:2.5;stroke-dasharray:6 3}
+.wire-preview{stroke:var(--orange);stroke-width:2;fill:none;stroke-dasharray:4 3;opacity:.6;pointer-events:none}
+.junction{fill:var(--navy)}
+
+/* ===== MISSION PANEL (right) ===== */
+#mission{display:none;width:280px;background:#fff;border-left:2px solid var(--navy);overflow-y:auto;flex-shrink:0;padding:0}
+#mission.on{display:block}
+.mission-header{background:var(--navy);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:8px}
+.mission-header h3{font-size:13px;flex:1}
+.mission-close{background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:0 4px}
+.mission-body{padding:14px}
+.mission-body .desc{font-size:12px;color:#555;line-height:1.5;margin-bottom:12px}
+.mission-step{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:12px}
+.step-check{width:20px;height:20px;border:2px solid #ddd;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;transition:.2s}
+.step-check.done{border-color:var(--success);background:var(--success);color:#fff}
+.step-check.current{border-color:var(--orange);animation:pulse-border 1.5s infinite}
+.step-text{flex:1;line-height:1.4}
+.step-text.done{text-decoration:line-through;color:#aaa}
+.mission-actions{padding:14px;border-top:1px solid #eee;display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:7px 16px;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600;font-family:inherit;transition:.15s}
+.btn:hover{filter:brightness(1.1)}
+.btn-primary{background:var(--orange);color:#fff}
+.btn-success{background:var(--success);color:#fff}
+.btn-secondary{background:#e8e8e8;color:var(--navy)}
+.btn-sm{padding:5px 10px;font-size:11px}
+#mission-result{margin:10px 14px;padding:10px;border-radius:8px;font-size:12px;display:none;line-height:1.5}
+#mission-result.ok{display:block;background:#d5f5e3;color:#27ae60;border:1px solid #a3d9b1}
+#mission-result.ko{display:block;background:#fadbd8;color:#c0392b;border:1px solid #f1948a}
+
+/* ===== TUTORIAL OVERLAY ===== */
+#tuto-overlay{display:none;position:fixed;inset:0;z-index:60}
+#tuto-overlay.on{display:block}
+#tuto-mask{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+#tuto-bubble{position:absolute;background:#fff;border-radius:12px;padding:16px 18px;max-width:320px;box-shadow:0 8px 30px rgba(0,0,0,.25);z-index:61}
+#tuto-bubble::after{content:'';position:absolute;width:16px;height:16px;background:#fff;transform:rotate(45deg)}
+#tuto-bubble.arrow-bottom::after{bottom:-8px;left:50%;margin-left:-8px}
+#tuto-bubble.arrow-top::after{top:-8px;left:50%;margin-left:-8px}
+#tuto-bubble.arrow-left::after{left:-8px;top:50%;margin-top:-8px}
+#tuto-bubble h4{font-size:14px;margin-bottom:6px;color:var(--navy)}
+#tuto-bubble p{font-size:12px;color:#555;line-height:1.5;margin-bottom:12px}
+#tuto-bubble .tuto-btns{display:flex;gap:6px;justify-content:flex-end}
+.tuto-step-indicator{font-size:10px;color:#aaa;margin-bottom:8px}
+#tuto-highlight{position:absolute;border:3px solid var(--orange);border-radius:8px;box-shadow:0 0 0 4000px rgba(0,0,0,.55);z-index:60;pointer-events:none;transition:.3s}
+
+/* ===== CONTEXT MENU ===== */
+#ctx{display:none;position:fixed;background:#fff;border:1px solid #ccc;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:30;min-width:150px;padding:4px 0;font-size:12px}
+#ctx.on{display:block}
+#ctx div{padding:7px 14px;cursor:pointer;display:flex;align-items:center;gap:8px}
+#ctx div:hover{background:var(--hover)}
+#ctx .danger{color:var(--error)}
+
+/* ===== TOAST ===== */
+#toast{position:fixed;bottom:50px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;opacity:0;transition:.3s;pointer-events:none;z-index:99;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+#toast.on{opacity:1}
+
+/* ===== VICTORY MODAL ===== */
+#victory{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:80;justify-content:center;align-items:center}
+#victory.on{display:flex}
+.victory-box{background:#fff;border-radius:16px;padding:30px;text-align:center;max-width:360px;width:90vw;animation:pop .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
+.victory-box .trophy{font-size:48px;margin-bottom:10px}
+.victory-box h3{font-size:20px;margin-bottom:6px}
+.victory-box .stars-big{font-size:32px;letter-spacing:4px;margin:10px 0}
+.victory-box p{font-size:13px;color:#666;margin-bottom:16px}
+.victory-box .xp-gain{background:var(--gold);color:var(--navy);padding:4px 12px;border-radius:12px;font-size:13px;font-weight:700;display:inline-block;margin-bottom:14px}
+
+/* ===== FOOTER ===== */
+#footer{background:var(--navy);color:#fff;font-size:10px;padding:0 12px;height:26px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+#footer .sep{width:1px;height:14px;background:rgba(255,255,255,.15)}
+#footer span:last-child{margin-left:auto;opacity:.4}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:768px){
+  #sidebar{width:180px}
+  #mission{width:240px}
+  .level-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+  .pal-item svg{width:26px;height:30px}
+}
+@media(max-width:600px){
+  #sidebar{display:none}
+  #mission{position:absolute;right:0;top:0;bottom:0;z-index:15;width:260px;box-shadow:-4px 0 16px rgba(0,0,0,.1)}
+  .level-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== SPLASH ===== -->
+<div id="splash">
+  <div class="logo">&#9889;</div>
+  <h1>inerWeb Schéma</h1>
+  <div class="sub">Apprends l'électrotechnique en construisant des schémas</div>
+  <div style="margin-top:10px">
+    <button class="splash-btn" onclick="startGame()">Commencer l'aventure</button>
+  </div>
+  <div style="margin-top:8px">
+    <button class="splash-btn sec" onclick="startFree()">Mode libre</button>
+  </div>
+  <div class="credit">F. Henninot &middot; LP Jacques Raynaud &middot; v001</div>
+</div>
+
+<!-- ===== MAIN APP ===== -->
+<div id="app">
+  <!-- Top bar -->
+  <div id="topbar">
+    <h1 onclick="showMap()" style="cursor:pointer">&#9889; inerWeb Schéma</h1>
+    <span class="badge">Edu</span>
+    <div class="tb" id="editor-tools" style="display:none">
+      <button onclick="showMap()" title="Carte des niveaux">&#127891; Niveaux</button>
+      <span class="sep"></span>
+      <button onclick="undo()" title="Ctrl+Z">&#8630;</button>
+      <button onclick="redo()" title="Ctrl+Y">&#8631;</button>
+      <span class="sep"></span>
+      <button id="btn-select" class="active" onclick="setTool('select')">&#9754; Sélection</button>
+      <button id="btn-wire" onclick="setTool('wire')">&#9889; Fil</button>
+      <button id="btn-erase" onclick="setTool('erase')">&#10060; Gomme</button>
+      <span class="sep"></span>
+      <button onclick="saveSchema()">&#128190;</button>
+      <button onclick="loadSchema()">&#128194;</button>
+    </div>
+    <div class="xp-bar">
+      <span class="lvl" id="player-level">Niv. 1</span>
+      <div class="xp-track"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div>
+      <span class="xp" id="xp-text">0 XP</span>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div id="content">
+    <!-- Map screen (levels) -->
+    <div id="map-screen"></div>
+
+    <!-- Editor screen -->
+    <div id="editor-screen">
+      <div id="sidebar">
+        <input type="text" id="pal-search" placeholder="&#128269; Rechercher..." oninput="filterPalette()">
+        <div id="pal-list"></div>
+      </div>
+      <div id="canvas-area">
+        <svg id="canvas"></svg>
+      </div>
+      <div id="mission">
+        <div class="mission-header">
+          <h3 id="mission-title">Mission</h3>
+          <button class="mission-close" onclick="closeMission()">&times;</button>
+        </div>
+        <div class="mission-body" id="mission-body"></div>
+        <div id="mission-result"></div>
+        <div class="mission-actions" id="mission-actions"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div id="footer">
+    <span id="status-tool">Sélection</span>
+    <span class="sep"></span>
+    <span id="status-pos"></span>
+    <span class="sep"></span>
+    <span id="status-info">Prêt</span>
+    <span>F. Henninot &middot; LP Jacques Raynaud &middot; v001</span>
+  </div>
+</div>
+
+<!-- Context menu -->
+<div id="ctx">
+  <div onclick="rotateSelected()">&#8635; Rotation 90°</div>
+  <div onclick="mirrorSelected()">&#8646; Miroir</div>
+  <div onclick="duplicateSelected()">&#128203; Dupliquer</div>
+  <div class="danger" onclick="deleteSelected()">&#10060; Supprimer</div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Victory modal -->
+<div id="victory" onclick="if(event.target===this)closeVictory()">
+  <div class="victory-box">
+    <div class="trophy" id="v-trophy">&#127942;</div>
+    <h3 id="v-title">Bravo !</h3>
+    <div class="stars-big" id="v-stars"></div>
+    <div class="xp-gain" id="v-xp">+50 XP</div>
+    <p id="v-msg"></p>
+    <button class="btn btn-primary" onclick="closeVictory();showMap()">Continuer</button>
+  </div>
+</div>
+
+<!-- Tutorial overlay -->
+<div id="tuto-overlay">
+  <div id="tuto-mask"></div>
+  <div id="tuto-highlight"></div>
+  <div id="tuto-bubble" class="arrow-bottom">
+    <div class="tuto-step-indicator" id="tuto-step-ind"></div>
+    <h4 id="tuto-title"></h4>
+    <p id="tuto-text"></p>
+    <div class="tuto-btns">
+      <button class="btn btn-secondary btn-sm" id="tuto-skip" onclick="endTutorial()">Passer</button>
+      <button class="btn btn-primary btn-sm" id="tuto-next" onclick="nextTutoStep()">Suivant</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ========================================================================
+   inerWeb Schéma v001 — Apprentissage ludique & progressif
+   F. Henninot — LP Jacques Raynaud
+   ======================================================================== */
+
+// ===== CONSTANTS =====
+const GRID = 20, PIN_R = 3.5, CANVAS_W = 4000, CANVAS_H = 3000;
+const ZOOM_MIN = 0.25, ZOOM_MAX = 3;
+
+const SCHEMA_FAMS = ['sources','contacts','bobines','commande','protections','moteurs',
+  'recepteurs','capteurs_froid','fusibles','variateurs','transformateurs','electronique',
+  'generateurs','frigo_schema','unifilaire','hydraulique'];
+const FAM_FR = {
+  sources:"Sources",contacts:"Contacts",bobines:"Bobines & Tempos",commande:"Commande",
+  protections:"Protections",moteurs:"Moteurs",recepteurs:"Signalisation",
+  capteurs_froid:"Capteurs froid",fusibles:"Fusibles",variateurs:"Variateurs",
+  transformateurs:"Transformateurs",electronique:"Électronique",generateurs:"Générateurs",
+  frigo_schema:"Schémas frigo",unifilaire:"Unifilaire",hydraulique:"Hydraulique"
+};
+
+// ===== PLAYER STATE =====
+let player = {
+  xp: 0,
+  level: 1,
+  completed: {},  // {levelId: {stars, bestXP}}
+};
+
+// ===== EDITOR STATE =====
+let allSymbols = [];
+let placed = [], wires = [];
+let history = [], historyIdx = -1;
+let tool = 'select';
+let selection = new Set();
+let wireStart = null, wirePreview = null;
+let dragState = null, panState = null;
+let viewX = 0, viewY = 0, zoom = 1;
+let uidCounter = 1;
+let currentLevel = null;
+let currentSteps = [];
+
+const $ = id => document.getElementById(id);
+let svg, wrap;
+
+// ===== LEVELS DATABASE =====
+const WORLDS = [
+  {
+    id: 'decouverte',
+    titre: 'Découverte',
+    icon: '&#127793;',
+    desc: 'Apprends à utiliser l\'éditeur de schémas. Pas besoin de connaître l\'électricité !',
+    levels: [
+      {
+        id: 'tuto_interface', titre: 'Premiers clics', diff: 'decouverte', xp: 30,
+        desc: 'Découvre l\'interface : place un symbole, trace un fil, supprime.',
+        steps: [
+          {text: 'Ouvre la famille "Sources" dans le panneau de gauche', check: () => document.querySelector('.fam-header.open')},
+          {text: 'Glisse un symbole "Source" sur le plan de travail', check: () => placed.some(p => p.symId.includes('source'))},
+          {text: 'Ouvre la famille "Signalisation"', check: () => true},
+          {text: 'Place un voyant ou une lampe sur le plan', check: () => placed.some(p => ['recepteur','voyant','lampe','signalisation'].some(k => p.symId.includes(k)))},
+          {text: 'Sélectionne l\'outil Fil (W) et relie les deux composants', check: () => wires.length >= 1},
+          {text: 'Essaie l\'outil Gomme (E) pour supprimer le fil', check: () => true},
+        ]
+      },
+      {
+        id: 'tuto_manipuler', titre: 'Manipuler les symboles', diff: 'decouverte', xp: 30,
+        desc: 'Apprends à déplacer, tourner et dupliquer les composants.',
+        steps: [
+          {text: 'Place un contact NO sur le plan', check: () => placed.some(p => p.symId.includes('contact_no'))},
+          {text: 'Sélectionne-le et appuie sur R pour le tourner', check: () => placed.some(p => p.rot > 0)},
+          {text: 'Appuie sur D pour le dupliquer', check: () => placed.filter(p => p.symId.includes('contact_no')).length >= 2},
+          {text: 'Déplace un des contacts en le glissant', check: () => true},
+        ]
+      },
+      {
+        id: 'tuto_symboles', titre: 'Reconnaître les symboles', diff: 'decouverte', xp: 40,
+        desc: 'Place les bons symboles : source, protection, interrupteur et lampe.',
+        steps: [
+          {text: 'Place une source (alimentation) — famille "Sources"', check: () => placed.some(p => p.symId.includes('source'))},
+          {text: 'Place une protection (disjoncteur) — famille "Protections"', check: () => placed.some(p => p.symId.includes('disjoncteur') || p.symId.includes('fusible'))},
+          {text: 'Place un contact de commande — famille "Contacts" ou "Commande"', check: () => placed.some(p => ['contact_no','interrupteur','bp_no'].some(k => p.symId.includes(k)))},
+          {text: 'Place un récepteur (voyant/lampe) — famille "Signalisation"', check: () => placed.some(p => ['recepteur','voyant','lampe','signalisation'].some(k => p.symId.includes(k)))},
+        ]
+      },
+    ]
+  },
+  {
+    id: 'domestique',
+    titre: 'Installations domestiques',
+    icon: '&#127968;',
+    desc: 'Les circuits classiques du bâtiment : allumage, va-et-vient, télérupteur...',
+    levels: [
+      {
+        id: 'simple_allumage', titre: 'Simple allumage', diff: 'facile', xp: 50,
+        desc: 'Commander une lampe depuis un seul point de commande.',
+        steps: [
+          {text: 'Place une source monophasée (Phase + Neutre)', check: () => placed.some(p => p.symId.includes('source'))},
+          {text: 'Place un disjoncteur de protection', check: () => placed.some(p => p.symId.includes('disjoncteur'))},
+          {text: 'Place un interrupteur (contact NO)', check: () => placed.some(p => ['contact_no','interrupteur','bp_no'].some(k => p.symId.includes(k)))},
+          {text: 'Place une lampe (signalisation)', check: () => placed.some(p => ['recepteur','voyant','lampe','signalisation'].some(k => p.symId.includes(k)))},
+          {text: 'Câble le circuit : source → disjoncteur → interrupteur → lampe → retour source', check: () => wires.length >= 3},
+        ],
+        hint: 'La phase passe par le disjoncteur puis l\'interrupteur avant d\'arriver à la lampe. Le neutre va directement à la lampe.'
+      },
+      {
+        id: 'double_allumage', titre: 'Double allumage', diff: 'facile', xp: 60,
+        desc: 'Commander deux lampes indépendamment depuis deux interrupteurs.',
+        steps: [
+          {text: 'Place une source monophasée', check: () => placed.some(p => p.symId.includes('source'))},
+          {text: 'Place un disjoncteur', check: () => placed.some(p => p.symId.includes('disjoncteur'))},
+          {text: 'Place deux interrupteurs (2 contacts NO)', check: () => placed.filter(p => ['contact_no','interrupteur'].some(k => p.symId.includes(k))).length >= 2},
+          {text: 'Place deux lampes', check: () => placed.filter(p => ['recepteur','voyant','lampe','signalisation'].some(k => p.symId.includes(k))).length >= 2},
+          {text: 'Câble les deux circuits en parallèle', check: () => wires.length >= 5},
+        ],
+        hint: 'Chaque interrupteur commande sa propre lampe. Les deux circuits partent de la même source.'
+      },
+      {
+        id: 'telerupteur', titre: 'Commande par télérupteur', diff: 'moyen', xp: 80,
+        desc: 'Commander à distance un circuit par impulsion avec trois boutons poussoirs.',
+        steps: [
+          {text: 'Place une source et une protection', check: () => placed.some(p => p.symId.includes('source')) && placed.some(p => p.symId.includes('disjoncteur'))},
+          {text: 'Place un télérupteur (bobine + contact)', check: () => placed.some(p => p.symId.includes('bobine') || p.symId.includes('telerupteur'))},
+          {text: 'Place 3 boutons poussoirs NO', check: () => placed.filter(p => p.symId.includes('bp_no')).length >= 3 || placed.filter(p => ['contact_no','bp_no'].some(k => p.symId.includes(k))).length >= 3},
+          {text: 'Place une lampe', check: () => placed.some(p => ['recepteur','voyant','lampe','signalisation'].some(k => p.symId.includes(k)))},
+          {text: 'Câble le circuit complet', check: () => wires.length >= 5},
+        ],
+        hint: 'Les 3 BP sont en parallèle pour piloter la bobine du télérupteur. Le contact du télérupteur alimente la lampe.'
+      },
+      {
+        id: 'minuterie', titre: 'Minuterie', diff: 'moyen', xp: 80,
+        desc: 'Commander deux lampes pendant un temps déterminé avec une minuterie.',
+        steps: [
+          {text: 'Place la source et la protection', check: () => placed.some(p => p.symId.includes('source')) && placed.some(p => p.symId.includes('disjoncteur'))},
+          {text: 'Place 3 boutons poussoirs', check: () => placed.filter(p => ['contact_no','bp_no'].some(k => p.symId.includes(k))).length >= 3},
+          {text: 'Place une temporisation (bobine tempo)', check: () => placed.some(p => p.symId.includes('tempo') || p.symId.includes('bobine'))},
+          {text: 'Place 2 lampes', check: () => placed.filter(p => ['recepteur','voyant','lampe','signalisation'].some(k => p.symId.includes(k))).length >= 2},
+          {text: 'Câble le circuit', check: () => wires.length >= 6},
+        ],
+        hint: 'Les BP en parallèle commandent la bobine de la minuterie. Le contact temporisé alimente les lampes.'
+      },
+    ]
+  },
+  {
+    id: 'industriel',
+    titre: 'Commande de moteurs',
+    icon: '&#9881;',
+    desc: 'Démarrage direct, inversion de sens, étoile-triangle... l\'électrotechnique industrielle.',
+    levels: [
+      {
+        id: 'memoire_relais', titre: 'Mémoire à relais', diff: 'moyen', xp: 70,
+        desc: 'Alimenter un relais KA avec un BP marche et un BP arrêt (auto-maintien).',
+        steps: [
+          {text: 'Place la source et la protection', check: () => placed.some(p => p.symId.includes('source')) && placed.some(p => p.symId.includes('disjoncteur') || p.symId.includes('protection'))},
+          {text: 'Place un BP arrêt (contact NF)', check: () => placed.some(p => p.symId.includes('bp_nf') || p.symId.includes('contact_nf'))},
+          {text: 'Place un BP marche (contact NO)', check: () => placed.some(p => p.symId.includes('bp_no') || p.symId.includes('contact_no'))},
+          {text: 'Place la bobine du relais KA', check: () => placed.some(p => p.symId.includes('bobine'))},
+          {text: 'Ajoute un contact NO pour l\'auto-maintien', check: () => placed.filter(p => ['contact_no','bp_no'].some(k => p.symId.includes(k))).length >= 2},
+          {text: 'Câble le circuit complet', check: () => wires.length >= 4},
+        ],
+        hint: 'BP arrêt (NF) en série, puis BP marche (NO) en parallèle avec le contact d\'auto-maintien, puis la bobine KA.'
+      },
+      {
+        id: 'demarrage_direct', titre: 'Démarrage direct 1 sens', diff: 'moyen', xp: 100,
+        desc: 'Moteur asynchrone triphasé — 1 sens de marche — commande par boîte à boutons.',
+        steps: [
+          {text: 'PUISSANCE : Place la source triphasée', check: () => placed.some(p => p.symId.includes('source'))},
+          {text: 'PUISSANCE : Place le disjoncteur tripolaire', check: () => placed.some(p => p.symId.includes('disjoncteur'))},
+          {text: 'PUISSANCE : Place le contacteur KM1', check: () => placed.some(p => p.symId.includes('contact_puissance') || p.symId.includes('contacteur'))},
+          {text: 'PUISSANCE : Place le relais thermique F1', check: () => placed.some(p => p.symId.includes('relais_therm') || p.symId.includes('thermique'))},
+          {text: 'PUISSANCE : Place le moteur triphasé', check: () => placed.some(p => p.symId.includes('moteur'))},
+          {text: 'COMMANDE : Place le transformateur', check: () => placed.some(p => p.symId.includes('transfo'))},
+          {text: 'COMMANDE : Place BP arrêt (NF) + BP marche (NO)', check: () => placed.some(p => p.symId.includes('bp_nf') || p.symId.includes('contact_nf')) && placed.some(p => p.symId.includes('bp_no'))},
+          {text: 'COMMANDE : Place la bobine KM1', check: () => placed.some(p => p.symId.includes('bobine'))},
+          {text: 'Câble les circuits puissance et commande', check: () => wires.length >= 8},
+        ],
+        hint: 'Circuit puissance : Source → Q → KM1 → F1 → M. Circuit commande : Transfo → Q → S1(NF) → [S2(NO) // KM1(NO)] → Bobine KM1.'
+      },
+      {
+        id: 'deux_sens', titre: '2 sens de marche', diff: 'difficile', xp: 130,
+        desc: 'Inversion du sens de rotation avec verrouillage électrique (KM1/KM2).',
+        steps: [
+          {text: 'Place la chaîne puissance : source → Q → KM1 → F1 → M', check: () => placed.some(p => p.symId.includes('moteur')) && placed.some(p => p.symId.includes('disjoncteur'))},
+          {text: 'Ajoute le contacteur KM2 (inversion 2 phases)', check: () => placed.filter(p => p.symId.includes('contact_puissance') || p.symId.includes('contacteur')).length >= 2},
+          {text: 'Circuit commande : BP arrêt + BP AV + BP AR', check: () => placed.filter(p => ['bp_no','bp_nf','contact_no','contact_nf'].some(k => p.symId.includes(k))).length >= 3},
+          {text: 'Place les bobines KM1 et KM2', check: () => placed.filter(p => p.symId.includes('bobine')).length >= 2},
+          {text: 'Verrouillage : contact NF de KM1 devant bobine KM2 (et inversement)', check: () => placed.filter(p => p.symId.includes('contact_nf')).length >= 2},
+          {text: 'Câble tout le schéma', check: () => wires.length >= 10},
+        ],
+        hint: 'Verrouillage : un contact NF de KM1 est en série avec la bobine KM2, et un contact NF de KM2 en série avec la bobine KM1.'
+      },
+      {
+        id: 'etoile_triangle', titre: 'Étoile-Triangle', diff: 'expert', xp: 160,
+        desc: 'Démarrage étoile-triangle avec temporisation — le grand classique.',
+        steps: [
+          {text: 'Place la chaîne puissance de base', check: () => placed.some(p => p.symId.includes('moteur')) && placed.some(p => p.symId.includes('disjoncteur'))},
+          {text: 'Place 3 contacteurs : KM1(étoile), KM2(ligne), KM3(triangle)', check: () => placed.filter(p => p.symId.includes('contact_puissance') || p.symId.includes('contacteur')).length >= 3},
+          {text: 'Circuit commande avec temporisation', check: () => placed.some(p => p.symId.includes('tempo') || p.symId.includes('bobine'))},
+          {text: 'BP arrêt + BP marche + auto-maintien', check: () => placed.filter(p => ['bp_no','bp_nf','contact_no','contact_nf'].some(k => p.symId.includes(k))).length >= 3},
+          {text: 'Câble complet puissance + commande', check: () => wires.length >= 12},
+        ],
+        hint: 'Au démarrage : KM1(étoile)+KM2(ligne). Après temporisation : KM1 s\'ouvre, KM3(triangle) se ferme.'
+      },
+    ]
+  },
+  {
+    id: 'froid',
+    titre: 'Froid & Climatique',
+    icon: '&#10052;',
+    desc: 'Les installations frigorifiques : chambre froide, pump down, dégivrage...',
+    levels: [
+      {
+        id: 'regulation_chauffage', titre: 'Régulation de chauffage', diff: 'facile', xp: 60,
+        desc: 'Schéma électrique d\'un chauffage régulé par thermostat d\'ambiance sur la pompe.',
+        steps: [
+          {text: 'Place la source et la protection générale', check: () => placed.some(p => p.symId.includes('source')) && placed.some(p => p.symId.includes('disjoncteur'))},
+          {text: 'Place un interrupteur marche/arrêt', check: () => placed.some(p => ['contact_no','interrupteur','bp_no'].some(k => p.symId.includes(k)))},
+          {text: 'Place le thermostat d\'ambiance (capteur froid)', check: () => placed.some(p => p.symId.includes('capteur') || p.symId.includes('thermostat') || p.famille === 'capteurs_froid')},
+          {text: 'Place le moteur de la pompe', check: () => placed.some(p => p.symId.includes('moteur'))},
+          {text: 'Câble le circuit en série', check: () => wires.length >= 3},
+        ],
+        hint: 'Circuit simple en série : source → protection → M/A → thermostat → pompe.'
+      },
+      {
+        id: 'chambre_positive', titre: 'Chambre positive', diff: 'moyen', xp: 100,
+        desc: 'Installation frigorifique : compresseur + condenseur + évaporateur, régulés par thermostat et pressostats.',
+        steps: [
+          {text: 'Place la source et la protection générale', check: () => placed.some(p => p.symId.includes('source')) && placed.some(p => p.symId.includes('disjoncteur'))},
+          {text: 'Place le thermostat de chambre', check: () => placed.some(p => p.symId.includes('capteur') || p.symId.includes('thermostat') || p.famille === 'capteurs_froid')},
+          {text: 'Place les pressostats BP et HP', check: () => placed.filter(p => p.symId.includes('capteur') || p.symId.includes('pressostat') || p.famille === 'capteurs_froid').length >= 2},
+          {text: 'Place le contacteur et le moteur compresseur', check: () => placed.some(p => p.symId.includes('moteur')) && placed.some(p => p.symId.includes('bobine') || p.symId.includes('contacteur'))},
+          {text: 'Place le condenseur et l\'évaporateur (moteurs)', check: () => placed.filter(p => p.symId.includes('moteur')).length >= 2},
+          {text: 'Place l\'électrovanne', check: () => placed.some(p => p.symId.includes('bobine') || p.symId.includes('electrovanne'))},
+          {text: 'Câble le schéma complet', check: () => wires.length >= 6},
+        ],
+        hint: 'Évaporateur en permanent. Thermostat + pressostats en série commandent le contacteur du compresseur, condenseur et électrovanne.'
+      },
+      {
+        id: 'pump_down', titre: 'Pump Down & dégivrage', diff: 'difficile', xp: 130,
+        desc: 'Chambre positive avec pump down et horloge de dégivrage.',
+        steps: [
+          {text: 'Place la chaîne de puissance complète', check: () => placed.some(p => p.symId.includes('source')) && placed.some(p => p.symId.includes('moteur'))},
+          {text: 'Place thermostat + pressostats', check: () => placed.filter(p => p.symId.includes('capteur') || p.famille === 'capteurs_froid').length >= 2},
+          {text: 'Place l\'horloge de dégivrage (temporisation)', check: () => placed.some(p => p.symId.includes('tempo') || p.symId.includes('horloge'))},
+          {text: 'Place l\'électrovanne pour le pump down', check: () => placed.some(p => p.symId.includes('bobine') || p.symId.includes('electrovanne'))},
+          {text: 'Place le contacteur du groupe', check: () => placed.some(p => p.symId.includes('bobine') || p.symId.includes('contacteur'))},
+          {text: 'Voyants de signalisation (tension + défaut)', check: () => placed.filter(p => ['recepteur','voyant','signalisation'].some(k => p.symId.includes(k))).length >= 1},
+          {text: 'Câble le schéma', check: () => wires.length >= 8},
+        ],
+        hint: 'L\'électrovanne est pilotée par thermostat + horloge. Le pressostat BP fait le pump down : quand l\'EV se ferme, la pression descend et le BP coupe le compresseur.'
+      },
+      {
+        id: 'chambre_negative', titre: 'Chambre négative', diff: 'expert', xp: 160,
+        desc: 'Chambre négative avec dégivrage par résistances et programmateur.',
+        steps: [
+          {text: 'Place toute la chaîne de puissance', check: () => placed.filter(p => p.symId.includes('moteur')).length >= 2},
+          {text: 'Place les capteurs (pressostats, thermostat chambre)', check: () => placed.filter(p => p.symId.includes('capteur') || p.famille === 'capteurs_froid').length >= 2},
+          {text: 'Place le programmateur de dégivrage', check: () => placed.some(p => p.symId.includes('tempo') || p.symId.includes('horloge'))},
+          {text: 'Place les résistances de dégivrage et de porte', check: () => placed.filter(p => p.symId.includes('resistance') || p.symId.includes('chauffage')).length >= 1 || placed.length >= 8},
+          {text: 'Place les contacteurs (groupe, dégivrage, évaporateur)', check: () => placed.filter(p => p.symId.includes('bobine')).length >= 2},
+          {text: 'Signalisation : voyant tension + défaut groupe', check: () => placed.filter(p => ['recepteur','voyant','signalisation'].some(k => p.symId.includes(k))).length >= 2},
+          {text: 'Câble le schéma complet', check: () => wires.length >= 12},
+        ],
+        hint: 'Le programmateur lance le cycle de dégivrage : coupe le compresseur, alimente les résistances, attend la fin de dégivrage (thermostat), puis relance avec un retard sur le ventilateur.'
+      },
+    ]
+  },
+];
+
+// ===== XP & PROGRESSION =====
+function getXPForLevel(lvl) { return lvl * 150; }
+function calcLevel(xp) {
+  let lvl = 1;
+  while (xp >= getXPForLevel(lvl)) { xp -= getXPForLevel(lvl); lvl++; }
+  return { level: lvl, xpInLevel: xp, xpNeeded: getXPForLevel(lvl) };
+}
+function addXP(amount) {
+  player.xp += amount;
+  const info = calcLevel(player.xp);
+  player.level = info.level;
+  $('player-level').textContent = 'Niv. ' + info.level;
+  $('xp-text').textContent = player.xp + ' XP';
+  $('xp-fill').style.width = Math.round(info.xpInLevel / info.xpNeeded * 100) + '%';
+  savePlayer();
+}
+
+function isLevelUnlocked(levelId) {
+  // First levels of each world are always unlocked
+  for (const w of WORLDS) {
+    if (w.levels[0]?.id === levelId) return true;
+    for (let i = 1; i < w.levels.length; i++) {
+      if (w.levels[i].id === levelId) {
+        return !!player.completed[w.levels[i - 1].id];
+      }
+    }
+  }
+  return true;
+}
+
+function getStars(levelId) {
+  return player.completed[levelId]?.stars || 0;
+}
+
+function savePlayer() {
+  try { localStorage.setItem('inerWeb_schema_player', JSON.stringify(player)); } catch(e) {}
+}
+function loadPlayer() {
+  try {
+    const s = localStorage.getItem('inerWeb_schema_player');
+    if (s) { Object.assign(player, JSON.parse(s)); }
+  } catch(e) {}
+  addXP(0); // refresh UI
+}
+
+// ===== INIT =====
+function init() {
+  const raw = typeof INERWEB_DATA === 'string' ? JSON.parse(INERWEB_DATA) : INERWEB_DATA;
+  allSymbols = raw.filter(s => SCHEMA_FAMS.includes(s.famille)).map(s => {
+    const pins = [];
+    const re = /<circle\s+cx="([^"]+)"\s+cy="([^"]+)"\s+r="([^"]+)"/g;
+    let m;
+    while ((m = re.exec(s.svg_sans)) !== null) {
+      if (parseFloat(m[3]) <= 2.5) pins.push({ x: parseFloat(m[1]), y: parseFloat(m[2]) });
+    }
+    return { ...s, pins };
+  });
+
+  svg = $('canvas');
+  wrap = $('canvas-area');
+
+  buildPalette();
+  initCanvas();
+  loadPlayer();
+
+  window.addEventListener('keydown', onKey);
+  wrap.addEventListener('contextmenu', e => { e.preventDefault(); showCtx(e); });
+  document.addEventListener('click', () => hideCtx());
+  window.addEventListener('resize', () => updateViewTransform());
+}
+
+// ===== SPLASH =====
+function startGame() {
+  $('splash').classList.add('hide');
+  setTimeout(() => { $('splash').style.display = 'none'; }, 600);
+  $('app').classList.add('on');
+  showMap();
+}
+function startFree() {
+  $('splash').classList.add('hide');
+  setTimeout(() => { $('splash').style.display = 'none'; }, 600);
+  $('app').classList.add('on');
+  openEditor(null);
+}
+
+// ===== MAP SCREEN =====
+function showMap() {
+  $('map-screen').classList.add('on');
+  $('editor-screen').classList.remove('on');
+  $('editor-tools').style.display = 'none';
+  renderMap();
+}
+
+function renderMap() {
+  const el = $('map-screen');
+  el.innerHTML = '';
+
+  // Header
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'text-align:center;margin-bottom:24px';
+  hdr.innerHTML = `<h2 style="font-size:22px;margin-bottom:4px">&#127891; Parcours d'apprentissage</h2>
+    <p style="font-size:13px;color:#888">Progresse de niveau en niveau — chaque mission validée débloque la suivante !</p>
+    <button class="btn btn-secondary" style="margin-top:10px" onclick="openEditor(null)">&#128295; Mode libre (bac à sable)</button>`;
+  el.appendChild(hdr);
+
+  WORLDS.forEach(world => {
+    const section = document.createElement('div');
+    section.className = 'map-section';
+
+    const totalStars = world.levels.reduce((s, l) => s + getStars(l.id), 0);
+    const maxStars = world.levels.length * 3;
+
+    section.innerHTML = `<h2><span class="level-icon">${world.icon}</span> ${world.titre} <span style="font-size:12px;color:#aaa;font-weight:400">${totalStars}/${maxStars} &#11088;</span></h2>
+      <div class="desc">${world.desc}</div>`;
+
+    const grid = document.createElement('div');
+    grid.className = 'level-grid';
+
+    world.levels.forEach(level => {
+      const unlocked = isLevelUnlocked(level.id);
+      const stars = getStars(level.id);
+      const done = stars > 0;
+
+      const card = document.createElement('div');
+      card.className = 'level-card' + (done ? ' completed' : '') + (!unlocked ? ' locked' : '');
+      card.innerHTML = `
+        <span class="diff-tag diff-${level.diff}">${level.diff.charAt(0).toUpperCase() + level.diff.slice(1)}</span>
+        <h4>${level.titre}</h4>
+        <p>${level.desc}</p>
+        <div class="stars">
+          ${[1,2,3].map(i => `<span class="star${i <= stars ? ' on' : ''}">&#11088;</span>`).join('')}
+        </div>
+        ${!unlocked ? '<span class="lock-icon">&#128274;</span>' : ''}
+        ${done ? '<span class="badge-done">&#10004;</span>' : ''}
+      `;
+
+      if (unlocked) {
+        card.onclick = () => openEditor(level);
+      }
+
+      grid.appendChild(card);
+    });
+
+    section.appendChild(grid);
+    el.appendChild(section);
+  });
+}
+
+// ===== EDITOR =====
+function openEditor(level) {
+  $('map-screen').classList.remove('on');
+  $('editor-screen').classList.add('on');
+  $('editor-tools').style.display = 'flex';
+
+  // Reset schema
+  placed = []; wires = []; uidCounter = 1; selection.clear();
+  history = []; historyIdx = -1;
+
+  currentLevel = level;
+  currentSteps = [];
+
+  if (level) {
+    // Setup mission panel
+    currentSteps = level.steps.map(s => ({ ...s, done: false }));
+    renderMission();
+    $('mission').classList.add('on');
+  } else {
+    $('mission').classList.remove('on');
+  }
+
+  setTool('select');
+  centerView();
+  pushHistory();
+  renderAll();
+}
+
+function renderMission() {
+  if (!currentLevel) return;
+  $('mission-title').textContent = currentLevel.titre;
+
+  const body = $('mission-body');
+  body.innerHTML = `<div class="desc">${currentLevel.desc}</div>`;
+
+  currentSteps.forEach((step, i) => {
+    const div = document.createElement('div');
+    div.className = 'mission-step';
+    const isCurrent = !step.done && (i === 0 || currentSteps[i - 1].done);
+    div.innerHTML = `
+      <div class="step-check${step.done ? ' done' : ''}${isCurrent ? ' current' : ''}">${step.done ? '&#10004;' : (i + 1)}</div>
+      <div class="step-text${step.done ? ' done' : ''}">${step.text}</div>`;
+    body.appendChild(div);
+  });
+
+  const actions = $('mission-actions');
+  actions.innerHTML = '';
+  const btnCheck = document.createElement('button');
+  btnCheck.className = 'btn btn-primary';
+  btnCheck.textContent = '&#9989; Vérifier';
+  btnCheck.onclick = checkMission;
+  actions.appendChild(btnCheck);
+
+  if (currentLevel.hint) {
+    const btnHint = document.createElement('button');
+    btnHint.className = 'btn btn-secondary';
+    btnHint.textContent = '&#128161; Indice';
+    btnHint.onclick = () => toast(currentLevel.hint);
+    actions.appendChild(btnHint);
+  }
+
+  $('mission-result').style.display = 'none';
+}
+
+function checkMission() {
+  if (!currentLevel) return;
+
+  let allDone = true;
+  let doneCount = 0;
+
+  currentSteps.forEach((step, i) => {
+    try {
+      step.done = step.check();
+    } catch(e) {
+      step.done = false;
+    }
+    if (step.done) doneCount++;
+    else allDone = false;
+  });
+
+  renderMission();
+
+  const el = $('mission-result');
+  if (allDone) {
+    // Calculate stars
+    const stars = Math.min(3, Math.max(1,
+      wires.length >= currentSteps.length ? 3 :
+      wires.length >= 2 ? 2 : 1
+    ));
+
+    const prevStars = getStars(currentLevel.id);
+    const isNew = !player.completed[currentLevel.id];
+    const xpGain = isNew ? currentLevel.xp : (stars > prevStars ? 20 : 0);
+
+    player.completed[currentLevel.id] = {
+      stars: Math.max(stars, prevStars),
+      bestXP: Math.max(currentLevel.xp, player.completed[currentLevel.id]?.bestXP || 0)
+    };
+
+    if (xpGain > 0) addXP(xpGain);
+    savePlayer();
+
+    // Victory!
+    showVictory(currentLevel.titre, stars, xpGain);
+
+    el.className = 'ok';
+    el.style.display = 'block';
+    el.innerHTML = '&#9989; Mission accomplie !';
+  } else {
+    el.className = 'ko';
+    el.style.display = 'block';
+    const remaining = currentSteps.filter(s => !s.done);
+    el.innerHTML = `&#10060; ${doneCount}/${currentSteps.length} étapes validées<br>` +
+      remaining.slice(0, 2).map(s => '&#8226; ' + s.text).join('<br>');
+  }
+}
+
+function closeMission() {
+  $('mission').classList.remove('on');
+}
+
+// ===== VICTORY =====
+function showVictory(titre, stars, xp) {
+  $('v-title').textContent = titre + ' terminé !';
+  $('v-stars').innerHTML = [1,2,3].map(i => i <= stars ? '&#11088;' : '&#9734;').join('');
+  $('v-xp').textContent = '+' + xp + ' XP';
+  $('v-msg').textContent = stars === 3 ? 'Parfait ! Schéma complet et bien câblé.' :
+    stars === 2 ? 'Bien joué ! Tu peux encore améliorer le câblage.' :
+    'Mission validée ! Reviens pour améliorer ton score.';
+  $('v-trophy').textContent = stars === 3 ? '&#127942;' : stars === 2 ? '&#127941;' : '&#127775;';
+  $('victory').classList.add('on');
+}
+function closeVictory() {
+  $('victory').classList.remove('on');
+}
+
+// ===== PALETTE =====
+function buildPalette() {
+  const list = $('pal-list');
+  list.innerHTML = '';
+  const byFam = {};
+  allSymbols.forEach(s => {
+    if (!byFam[s.famille]) byFam[s.famille] = [];
+    byFam[s.famille].push(s);
+  });
+
+  SCHEMA_FAMS.forEach(fam => {
+    if (!byFam[fam]) return;
+    const items = byFam[fam];
+    const hdr = document.createElement('div');
+    hdr.className = 'fam-header';
+    hdr.dataset.fam = fam;
+    hdr.innerHTML = `<span class="arrow">&#9654;</span> ${FAM_FR[fam] || fam} <span class="cnt">${items.length}</span>`;
+    hdr.onclick = () => hdr.classList.toggle('open');
+
+    const grid = document.createElement('div');
+    grid.className = 'fam-items';
+    items.forEach(s => {
+      const d = document.createElement('div');
+      d.className = 'pal-item';
+      d.dataset.id = s.id;
+      d.dataset.fam = s.famille;
+      d.dataset.nom = s.nom.toLowerCase();
+      d.innerHTML = s.svg_sans + `<div class="lbl" title="${s.nom}">${s.nom}</div>`;
+      d.draggable = true;
+      d.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', s.id);
+        e.dataTransfer.effectAllowed = 'copy';
+      });
+      d.addEventListener('dblclick', () => {
+        const cx = (-viewX + wrap.clientWidth / 2) / zoom;
+        const cy = (-viewY + wrap.clientHeight / 2) / zoom;
+        placeSymbol(s.id, snapTo(cx), snapTo(cy));
+      });
+      grid.appendChild(d);
+    });
+
+    list.appendChild(hdr);
+    list.appendChild(grid);
+  });
+}
+
+function filterPalette() {
+  const q = $('pal-search').value.toLowerCase().trim();
+  document.querySelectorAll('.pal-item').forEach(el => {
+    el.style.display = (!q || el.dataset.nom.includes(q) || el.dataset.fam.includes(q)) ? '' : 'none';
+  });
+  if (q) {
+    document.querySelectorAll('.fam-header').forEach(h => {
+      const items = h.nextElementSibling;
+      if (items?.querySelector('.pal-item:not([style*="display: none"])')) h.classList.add('open');
+      else h.classList.remove('open');
+    });
+  }
+}
+
+// ===== CANVAS =====
+function initCanvas() {
+  svg.setAttribute('width', CANVAS_W);
+  svg.setAttribute('height', CANVAS_H);
+
+  ['grid-layer','wire-layer','symbol-layer','overlay-layer'].forEach(id => {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.id = id;
+    svg.appendChild(g);
+  });
+
+  drawGrid();
+  setupCanvasEvents();
+  centerView();
+}
+
+function centerView() {
+  viewX = -(CANVAS_W / 2 - wrap.clientWidth / 2);
+  viewY = -(CANVAS_H / 2 - wrap.clientHeight / 2);
+  zoom = 1;
+  updateViewTransform();
+}
+
+function updateViewTransform() {
+  svg.style.transform = `translate(${viewX}px,${viewY}px) scale(${zoom})`;
+  svg.style.transformOrigin = '0 0';
+}
+
+function drawGrid() {
+  const g = document.getElementById('grid-layer');
+  if (!g) return;
+  g.innerHTML = '';
+  g.appendChild(mkSVG('rect', { x: 0, y: 0, width: CANVAS_W, height: CANVAS_H, fill: '#fff' }));
+  for (let x = 0; x <= CANVAS_W; x += GRID) {
+    g.appendChild(mkSVG('line', { x1: x, y1: 0, x2: x, y2: CANVAS_H, class: x % (GRID*5) === 0 ? 'grid-major' : 'grid-line' }));
+  }
+  for (let y = 0; y <= CANVAS_H; y += GRID) {
+    g.appendChild(mkSVG('line', { x1: 0, y1: y, x2: CANVAS_W, y2: y, class: y % (GRID*5) === 0 ? 'grid-major' : 'grid-line' }));
+  }
+}
+
+function setupCanvasEvents() {
+  wrap.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  wrap.addEventListener('drop', e => {
+    e.preventDefault();
+    const symId = e.dataTransfer.getData('text/plain');
+    if (!symId) return;
+    const pt = clientToCanvas(e.clientX, e.clientY);
+    placeSymbol(symId, snapTo(pt.x), snapTo(pt.y));
+  });
+  wrap.addEventListener('mousedown', onMouseDown);
+  wrap.addEventListener('mousemove', onMouseMove);
+  wrap.addEventListener('mouseup', onMouseUp);
+  wrap.addEventListener('wheel', onWheel, { passive: false });
+
+  // Touch
+  wrap.addEventListener('touchstart', e => {
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      onMouseDown({ clientX: t.clientX, clientY: t.clientY, button: 0, ctrlKey: false, shiftKey: false, preventDefault(){}, stopPropagation(){} });
+    }
+  }, { passive: false });
+  wrap.addEventListener('touchmove', e => {
+    if (e.touches.length === 1) {
+      onMouseMove({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY });
+      e.preventDefault();
+    }
+  }, { passive: false });
+  wrap.addEventListener('touchend', () => onMouseUp({}));
+}
+
+function clientToCanvas(cx, cy) {
+  const r = wrap.getBoundingClientRect();
+  return { x: (cx - r.left - viewX) / zoom, y: (cy - r.top - viewY) / zoom };
+}
+function snapTo(v) { return Math.round(v / GRID) * GRID; }
+
+// ===== MOUSE =====
+function onMouseDown(e) {
+  const pt = clientToCanvas(e.clientX, e.clientY);
+
+  if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
+    panState = { sx: e.clientX, sy: e.clientY, vx: viewX, vy: viewY };
+    wrap.style.cursor = 'grabbing';
+    if (e.preventDefault) e.preventDefault();
+    return;
+  }
+  if (e.button !== 0) return;
+
+  if (tool === 'wire') { handleWireClick(pt); return; }
+  if (tool === 'erase') { handleEraseClick(pt); return; }
+
+  const hit = hitTest(pt);
+  if (hit) {
+    if (hit.pin !== undefined) {
+      wireStart = { uid: hit.uid, pinIdx: hit.pin };
+      setTool('wire');
+      return;
+    }
+    if (!selection.has(hit.uid)) {
+      if (!e.ctrlKey) clearSelection();
+      selectItem(hit.uid);
+    }
+    dragState = {
+      startX: pt.x, startY: pt.y,
+      items: [...selection].map(uid => {
+        const p = placed.find(s => s.uid === uid);
+        if (p) return { uid, ox: p.x, oy: p.y, type: 'sym' };
+        return null;
+      }).filter(Boolean)
+    };
+  } else {
+    if (!e.ctrlKey) clearSelection();
+  }
+}
+
+function onMouseMove(e) {
+  const pt = clientToCanvas(e.clientX, e.clientY);
+  $('status-pos').textContent = `x:${Math.round(pt.x)} y:${Math.round(pt.y)}`;
+
+  if (panState) {
+    viewX = panState.vx + (e.clientX - panState.sx);
+    viewY = panState.vy + (e.clientY - panState.sy);
+    updateViewTransform();
+    return;
+  }
+  if (dragState) {
+    const dx = snapTo(pt.x - dragState.startX);
+    const dy = snapTo(pt.y - dragState.startY);
+    dragState.items.forEach(it => {
+      if (it.type === 'sym') {
+        const p = placed.find(s => s.uid === it.uid);
+        if (p) { p.x = it.ox + dx; p.y = it.oy + dy; }
+      }
+    });
+    renderAll();
+    return;
+  }
+  if (tool === 'wire' && wireStart) {
+    const from = getWireStartPos();
+    if (from) {
+      wirePreview = buildWirePath(from.x, from.y, snapTo(pt.x), snapTo(pt.y));
+      renderOverlay();
+    }
+  }
+}
+
+function onMouseUp(e) {
+  if (panState) {
+    panState = null;
+    wrap.style.cursor = tool === 'wire' ? 'crosshair' : (tool === 'erase' ? 'not-allowed' : 'default');
+    return;
+  }
+  if (dragState) {
+    const moved = dragState.items.some(it => {
+      const p = placed.find(s => s.uid === it.uid);
+      return p && (p.x !== it.ox || p.y !== it.oy);
+    });
+    if (moved) pushHistory();
+    dragState = null;
+  }
+}
+
+function onWheel(e) {
+  e.preventDefault();
+  const r = wrap.getBoundingClientRect();
+  const mx = e.clientX - r.left, my = e.clientY - r.top;
+  const oldZoom = zoom;
+  zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom * (e.deltaY > 0 ? 0.9 : 1.1)));
+  viewX = mx - (mx - viewX) * (zoom / oldZoom);
+  viewY = my - (my - viewY) * (zoom / oldZoom);
+  updateViewTransform();
+}
+
+// ===== HIT TEST =====
+function hitTest(pt) {
+  for (const p of placed) {
+    const sym = allSymbols.find(s => s.id === p.symId);
+    if (!sym) continue;
+    const pins = getTransformedPins(p, sym);
+    for (let i = 0; i < pins.length; i++) {
+      const dx = pt.x - pins[i].x, dy = pt.y - pins[i].y;
+      if (Math.sqrt(dx*dx + dy*dy) < 8) return { uid: p.uid, type: 'sym', pin: i };
+    }
+  }
+  for (let i = placed.length - 1; i >= 0; i--) {
+    const p = placed[i];
+    const sym = allSymbols.find(s => s.id === p.symId);
+    if (!sym) continue;
+    const vb = parseViewBox(sym.svg_sans);
+    if (!vb) continue;
+    if (Math.abs(pt.x - p.x) < (vb.w/2+12) && Math.abs(pt.y - p.y) < (vb.h/2+12))
+      return { uid: p.uid, type: 'sym' };
+  }
+  for (const w of wires) {
+    for (let i = 0; i < w.points.length - 1; i++) {
+      if (distSeg(pt, w.points[i], w.points[i+1]) < 6) return { uid: w.uid, type: 'wire' };
+    }
+  }
+  return null;
+}
+
+function distSeg(p, a, b) {
+  const dx = b.x-a.x, dy = b.y-a.y, len2 = dx*dx+dy*dy;
+  if (len2===0) return Math.hypot(p.x-a.x, p.y-a.y);
+  let t = Math.max(0, Math.min(1, ((p.x-a.x)*dx+(p.y-a.y)*dy)/len2));
+  return Math.hypot(p.x-(a.x+t*dx), p.y-(a.y+t*dy));
+}
+
+// ===== SYMBOL OPS =====
+function placeSymbol(symId, x, y) {
+  const uid = uidCounter++;
+  placed.push({ uid, symId, x, y, rot: 0, mirror: false });
+  pushHistory();
+  renderAll();
+  const sym = allSymbols.find(s => s.id === symId);
+  toast((sym?.nom || symId) + ' placé');
+}
+
+function getTransformedPins(p, sym) {
+  return sym.pins.map(pin => {
+    let px = pin.x, py = pin.y;
+    if (p.mirror) px = -px;
+    for (let r = 0; r < (p.rot||0); r++) { const t = px; px = -py; py = t; }
+    return { x: p.x + px, y: p.y + py };
+  });
+}
+
+function parseViewBox(s) {
+  const m = s.match(/viewBox="([^"]+)"/);
+  if (!m) return null;
+  const [x,y,w,h] = m[1].split(/\s+/).map(Number);
+  return {x,y,w,h};
+}
+
+function isPinConnected(p, sym, idx) {
+  const pins = getTransformedPins(p, sym);
+  const pin = pins[idx];
+  return wires.some(w => w.points.some(pt => Math.abs(pt.x-pin.x)<2 && Math.abs(pt.y-pin.y)<2));
+}
+
+// ===== WIRE =====
+function handleWireClick(pt) {
+  const sx = snapTo(pt.x), sy = snapTo(pt.y);
+  if (!wireStart) {
+    const hit = hitTest(pt);
+    wireStart = (hit && hit.pin !== undefined) ? { uid: hit.uid, pinIdx: hit.pin } : { x: sx, y: sy };
+    $('status-info').textContent = 'Cliquez sur le point d\'arrivée';
+    return;
+  }
+  const from = getWireStartPos();
+  if (!from) { wireStart = null; return; }
+  const hit = hitTest(pt);
+  let toX = sx, toY = sy;
+  if (hit && hit.pin !== undefined) {
+    const p = placed.find(s => s.uid === hit.uid);
+    const sym = allSymbols.find(s => s.id === p.symId);
+    const pins = getTransformedPins(p, sym);
+    toX = pins[hit.pin].x; toY = pins[hit.pin].y;
+  }
+  const points = buildWirePoints(from.x, from.y, toX, toY);
+  if (points.length >= 2) {
+    wires.push({ uid: uidCounter++, points });
+    pushHistory();
+    renderAll();
+  }
+  wireStart = null; wirePreview = null;
+  renderOverlay();
+  $('status-info').textContent = 'Fil tracé';
+}
+
+function getWireStartPos() {
+  if (!wireStart) return null;
+  if (wireStart.x !== undefined) return wireStart;
+  const p = placed.find(s => s.uid === wireStart.uid);
+  if (!p) return null;
+  const sym = allSymbols.find(s => s.id === p.symId);
+  if (!sym) return null;
+  return getTransformedPins(p, sym)[wireStart.pinIdx] || null;
+}
+
+function buildWirePoints(x1,y1,x2,y2) {
+  if (x1===x2 || y1===y2) return [{x:x1,y:y1},{x:x2,y:y2}];
+  return [{x:x1,y:y1},{x:x1,y:y2},{x:x2,y:y2}];
+}
+function buildWirePath(x1,y1,x2,y2) {
+  return buildWirePoints(x1,y1,x2,y2).map((p,i) => (i?'L':'M')+p.x+','+p.y).join(' ');
+}
+
+// ===== ERASE =====
+function handleEraseClick(pt) {
+  const hit = hitTest(pt);
+  if (!hit) return;
+  if (hit.type === 'sym') placed = placed.filter(p => p.uid !== hit.uid);
+  else wires = wires.filter(w => w.uid !== hit.uid);
+  selection.delete(hit.uid);
+  pushHistory(); renderAll();
+  toast('Supprimé');
+}
+
+// ===== SELECTION =====
+function selectItem(uid) { selection.add(uid); renderAll(); }
+function clearSelection() { selection.clear(); renderAll(); }
+function deleteSelected() {
+  hideCtx();
+  if (!selection.size) return;
+  selection.forEach(uid => {
+    placed = placed.filter(p => p.uid !== uid);
+    wires = wires.filter(w => w.uid !== uid);
+  });
+  selection.clear(); pushHistory(); renderAll(); toast('Supprimé');
+}
+function rotateSelected() {
+  hideCtx();
+  selection.forEach(uid => { const p = placed.find(s => s.uid === uid); if (p) p.rot = ((p.rot||0)+1)%4; });
+  pushHistory(); renderAll();
+}
+function mirrorSelected() {
+  hideCtx();
+  selection.forEach(uid => { const p = placed.find(s => s.uid === uid); if (p) p.mirror = !p.mirror; });
+  pushHistory(); renderAll();
+}
+function duplicateSelected() {
+  hideCtx();
+  const ns = new Set();
+  selection.forEach(uid => {
+    const p = placed.find(s => s.uid === uid);
+    if (p) { const n = uidCounter++; placed.push({...p, uid:n, x:p.x+GRID*2, y:p.y+GRID*2}); ns.add(n); }
+  });
+  selection = ns; pushHistory(); renderAll();
+}
+
+// ===== RENDER =====
+function renderAll() { renderSymbols(); renderWires(); renderOverlay(); }
+
+function renderSymbols() {
+  const g = document.getElementById('symbol-layer');
+  if (!g) return;
+  g.innerHTML = '';
+  placed.forEach(p => {
+    const sym = allSymbols.find(s => s.id === p.symId);
+    if (!sym) return;
+    const group = mkSVG('g', {
+      class: 'sym-group' + (selection.has(p.uid) ? ' selected' : ''),
+      'data-uid': p.uid,
+      transform: `translate(${p.x},${p.y}) rotate(${(p.rot||0)*90}) ${p.mirror ? 'scale(-1,1)' : ''}`
+    });
+    const vb = parseViewBox(sym.svg_sans);
+    if (vb) {
+      group.appendChild(mkSVG('rect', {
+        class: 'sym-bg', x: vb.x-4, y: vb.y-4, width: vb.w+8, height: vb.h+8,
+        fill: 'rgba(255,255,255,.6)', stroke: 'transparent', 'stroke-width': 1.5, rx: 4
+      }));
+    }
+    const content = mkSVG('g');
+    content.innerHTML = sym.svg_sans.replace(/<\/?svg[^>]*>/g, '');
+    group.appendChild(content);
+    sym.pins.forEach((pin, idx) => {
+      const connected = isPinConnected(p, sym, idx);
+      const dot = mkSVG('circle', {
+        class: 'pin-dot' + (connected ? ' connected' : ''),
+        cx: pin.x, cy: pin.y, r: PIN_R
+      });
+      dot.addEventListener('mousedown', e => {
+        e.stopPropagation();
+        wireStart = { uid: p.uid, pinIdx: idx };
+        setTool('wire');
+      });
+      group.appendChild(dot);
+    });
+    if (vb) {
+      const label = mkSVG('text', {
+        x: 0, y: vb.y + vb.h + 12,
+        'font-size': '8', 'text-anchor': 'middle', fill: '#999',
+        'font-family': 'Segoe UI, Calibri, sans-serif'
+      });
+      label.textContent = sym.nom;
+      group.appendChild(label);
+    }
+    g.appendChild(group);
+  });
+}
+
+function renderWires() {
+  const g = document.getElementById('wire-layer');
+  if (!g) return;
+  g.innerHTML = '';
+  wires.forEach(w => {
+    const d = w.points.map((p,i) => (i?'L':'M')+p.x+','+p.y).join(' ');
+    const path = mkSVG('path', { class: 'wire'+(selection.has(w.uid)?' selected':''), d, 'data-uid': w.uid });
+    path.addEventListener('mousedown', e => {
+      if (tool === 'erase') { e.stopPropagation(); wires = wires.filter(wr=>wr.uid!==w.uid); pushHistory(); renderAll(); toast('Fil supprimé'); return; }
+      if (tool === 'select') { e.stopPropagation(); if (!e.ctrlKey) clearSelection(); selectItem(w.uid); }
+    });
+    g.appendChild(path);
+  });
+}
+
+function renderOverlay() {
+  const g = document.getElementById('overlay-layer');
+  if (!g) return;
+  g.innerHTML = '';
+  if (wirePreview) g.appendChild(mkSVG('path', { class: 'wire-preview', d: wirePreview }));
+}
+
+// ===== TOOL =====
+function setTool(t) {
+  tool = t; wireStart = null; wirePreview = null; renderOverlay();
+  document.querySelectorAll('#editor-tools button[id^="btn-"]').forEach(b => b.classList.remove('active'));
+  const b = $('btn-' + t);
+  if (b) b.classList.add('active');
+  wrap.style.cursor = t === 'wire' ? 'crosshair' : (t === 'erase' ? 'not-allowed' : 'default');
+  const names = { select:'Sélection', wire:'Fil', erase:'Gomme' };
+  $('status-tool').textContent = names[t] || t;
+}
+
+// ===== HISTORY =====
+function pushHistory() {
+  const state = JSON.stringify({ placed, wires, uidCounter });
+  history = history.slice(0, historyIdx + 1);
+  history.push(state);
+  historyIdx = history.length - 1;
+  if (history.length > 80) { history.shift(); historyIdx--; }
+}
+function undo() {
+  if (historyIdx <= 0) return;
+  historyIdx--; restoreHistory();
+}
+function redo() {
+  if (historyIdx >= history.length - 1) return;
+  historyIdx++; restoreHistory();
+}
+function restoreHistory() {
+  const s = JSON.parse(history[historyIdx]);
+  placed = s.placed; wires = s.wires; uidCounter = s.uidCounter;
+  selection.clear(); renderAll();
+}
+
+// ===== KEYBOARD =====
+function onKey(e) {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'Delete' || e.key === 'Backspace') { deleteSelected(); e.preventDefault(); }
+  if (e.key === 'r' || e.key === 'R') rotateSelected();
+  if (e.key === 'm' || e.key === 'M') mirrorSelected();
+  if (e.key === 'd' || e.key === 'D') duplicateSelected();
+  if (e.key === 'v' || e.key === 'V') setTool('select');
+  if (e.key === 'w' || e.key === 'W') setTool('wire');
+  if (e.key === 'e' || e.key === 'E') setTool('erase');
+  if (e.key === 'Escape') { wireStart = null; wirePreview = null; clearSelection(); setTool('select'); renderOverlay(); }
+  if (e.ctrlKey && e.key === 'z') { undo(); e.preventDefault(); }
+  if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) { redo(); e.preventDefault(); }
+  if (e.ctrlKey && e.key === 'a') { e.preventDefault(); placed.forEach(p => selection.add(p.uid)); wires.forEach(w => selection.add(w.uid)); renderAll(); }
+  if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveSchema(); }
+}
+
+// ===== CONTEXT MENU =====
+function showCtx(e) {
+  const pt = clientToCanvas(e.clientX, e.clientY);
+  const hit = hitTest(pt);
+  if (!hit || hit.type === 'wire') return;
+  if (!selection.has(hit.uid)) { clearSelection(); selectItem(hit.uid); }
+  const ctx = $('ctx');
+  ctx.style.left = e.clientX + 'px';
+  ctx.style.top = e.clientY + 'px';
+  ctx.classList.add('on');
+}
+function hideCtx() { $('ctx').classList.remove('on'); }
+
+// ===== SAVE/LOAD =====
+function saveSchema() {
+  const data = JSON.stringify({ version: 'inerWeb-Schema-v001', placed, wires, uidCounter }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'schema_' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Schéma sauvegardé');
+}
+
+function loadSchema() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        placed = data.placed || []; wires = data.wires || []; uidCounter = data.uidCounter || 1;
+        selection.clear(); pushHistory(); renderAll();
+        toast('Schéma chargé');
+      } catch(err) { toast('Erreur : ' + err.message); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function newSchema() {
+  placed = []; wires = []; uidCounter = 1; selection.clear();
+  currentLevel = null; currentSteps = [];
+  $('mission').classList.remove('on');
+  pushHistory(); renderAll();
+}
+
+// ===== SVG HELPERS =====
+function mkSVG(tag, attrs = {}) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attrs).forEach(([k,v]) => el.setAttribute(k, v));
+  return el;
+}
+
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('on');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('on'), 2500);
+}
+
+// ===== BOOT =====
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

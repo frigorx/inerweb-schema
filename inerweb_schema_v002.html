@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>inerWeb Schéma v002 — Compagnon Électrotechnique</title>
+<script src="inerweb_data.js"></script>
+<script src="inerweb-results.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1b3a63;--orange:#ff6b35;--bg:#f5f5f0;--grid:#e8e5dc;
+  --success:#27ae60;--error:#e74c3c;--gold:#f1c40f;
+  --phase-l1:#8B4513;--phase-l2:#222;--phase-l3:#808080;
+  --neutre:#2980b9;--pe:#27ae60;--cmd-24v:#e74c3c;--cmd-retour:#3498db;
+  --radius:10px;
+}
+html,body{height:100%;overflow:hidden;font-family:'Segoe UI',Calibri,sans-serif;background:var(--bg);color:var(--navy)}
+
+/* ===== SPLASH ===== */
+#splash{position:fixed;inset:0;background:linear-gradient(135deg,#1b3a63,#2c5f9e);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;transition:opacity .5s}
+#splash.hide{opacity:0;pointer-events:none}
+#splash h1{font-size:clamp(26px,5vw,40px);margin:8px 0 4px;text-shadow:0 2px 8px rgba(0,0,0,.3)}
+#splash .sub{font-size:clamp(12px,2vw,15px);opacity:.7;margin-bottom:24px;text-align:center;max-width:400px;line-height:1.5}
+#splash .logo{font-size:56px;filter:drop-shadow(0 4px 12px rgba(0,0,0,.3))}
+.splash-btn{display:inline-block;padding:13px 32px;background:var(--orange);color:#fff;border:none;border-radius:28px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 16px rgba(255,107,53,.4);transition:.2s;margin:5px}
+.splash-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,107,53,.5)}
+.splash-btn.sec{background:rgba(255,255,255,.15);box-shadow:none}
+#splash .credit{position:absolute;bottom:14px;font-size:10px;opacity:.4}
+
+/* ===== APP LAYOUT ===== */
+#app{display:none;height:100vh;flex-direction:column}
+#app.on{display:flex}
+#topbar{background:var(--navy);color:#fff;padding:5px 12px;display:flex;align-items:center;gap:8px;min-height:42px;flex-shrink:0}
+#topbar h1{font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.badge{background:var(--orange);font-size:9px;padding:2px 7px;border-radius:3px;font-weight:700}
+.tb{display:flex;align-items:center;gap:2px;margin-left:auto}
+.tb button{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.12);border-radius:5px;padding:4px 9px;font-size:11px;cursor:pointer;font-family:inherit;transition:.12s;white-space:nowrap}
+.tb button:hover{background:rgba(255,255,255,.2)}
+.tb button.active{background:var(--orange);border-color:var(--orange)}
+.tb .sep{width:1px;height:18px;background:rgba(255,255,255,.12);margin:0 2px}
+.xp-bar{display:flex;align-items:center;gap:5px;margin-left:10px}
+.xp-bar .lvl{font-size:10px;background:var(--gold);color:var(--navy);padding:2px 7px;border-radius:10px;font-weight:700}
+.xp-track{width:50px;height:5px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden}
+.xp-fill{height:100%;background:var(--gold);border-radius:3px;transition:width .4s}
+.xp-bar .xp{font-size:9px;opacity:.5}
+
+#content{flex:1;overflow:hidden;position:relative}
+
+/* ===== MAP SCREEN ===== */
+#map-screen{display:none;width:100%;height:100%;overflow-y:auto;padding:20px;background:linear-gradient(180deg,#f5f5f0,#e8e5dc)}
+#map-screen.on{display:block}
+.map-header{text-align:center;margin-bottom:20px}
+.map-header h2{font-size:20px;margin-bottom:4px}
+.map-header p{font-size:12px;color:#888;margin-bottom:10px}
+.map-section{max-width:960px;margin:0 auto 24px}
+.map-section h2{font-size:16px;display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.map-section .desc{font-size:12px;color:#888;margin-bottom:10px}
+.level-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.level-card{background:#fff;border:2px solid #e0ddd5;border-radius:var(--radius);padding:12px;cursor:pointer;transition:.2s;position:relative}
+.level-card:hover{border-color:var(--orange);transform:translateY(-1px);box-shadow:0 3px 12px rgba(0,0,0,.06)}
+.level-card.locked{opacity:.45;cursor:not-allowed;filter:grayscale(.2)}
+.level-card.locked:hover{transform:none;box-shadow:none;border-color:#e0ddd5}
+.level-card.done{border-color:var(--success)}
+.level-card h4{font-size:13px;margin-bottom:3px}
+.level-card p{font-size:10px;color:#777;line-height:1.3;margin-bottom:6px}
+.level-card .stars{display:flex;gap:1px;font-size:14px}
+.star-on{color:var(--gold)}.star-off{color:#ddd}
+.level-card .lock{position:absolute;top:6px;right:8px;font-size:16px;opacity:.25}
+.level-card .check-done{position:absolute;top:6px;right:8px;background:var(--success);color:#fff;font-size:8px;padding:2px 5px;border-radius:3px;font-weight:700}
+.diff-tag{font-size:8px;padding:1px 5px;border-radius:3px;font-weight:700;display:inline-block;margin-bottom:4px}
+.diff-decouverte{background:#d5f5e3;color:#27ae60}
+.diff-facile{background:#d5f5e3;color:#27ae60}
+.diff-moyen{background:#fef9e7;color:#f39c12}
+.diff-difficile{background:#fadbd8;color:#e74c3c}
+.diff-expert{background:#e8daef;color:#8e44ad}
+.mode-tabs{display:flex;gap:4px;margin-bottom:8px}
+.mode-tab{padding:4px 10px;border:1px solid #ddd;border-radius:15px;font-size:10px;cursor:pointer;background:#fff}
+.mode-tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+/* ===== ACTIVITY SCREEN ===== */
+#activity{display:none;width:100%;height:100%;flex-direction:row}
+#activity.on{display:flex}
+
+/* Sidebar palette */
+#sidebar{width:210px;background:#fff;border-right:2px solid var(--navy);overflow-y:auto;flex-shrink:0}
+#sidebar.hidden{display:none}
+#pal-search{width:100%;padding:6px 10px;border:none;border-bottom:2px solid var(--navy);font-size:12px;outline:none;font-family:inherit}
+.fam-header{padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;background:#fafaf7;user-select:none;border-bottom:1px solid #eee}
+.fam-header:hover{background:#f0efe8}
+.fam-header .arrow{font-size:8px;transition:.2s;display:inline-block}
+.fam-header.open .arrow{transform:rotate(90deg)}
+.fam-header .cnt{margin-left:auto;color:#bbb;font-size:9px;font-weight:400}
+.fam-items{display:none;padding:3px 5px;grid-template-columns:repeat(3,1fr);gap:3px}
+.fam-header.open+.fam-items{display:grid}
+.pal-item{background:#fff;border:1.5px solid #ddd;border-radius:5px;padding:3px 2px 2px;display:flex;flex-direction:column;align-items:center;gap:1px;cursor:grab;transition:.12s;min-height:48px;justify-content:center}
+.pal-item:hover{border-color:var(--orange);box-shadow:0 1px 4px rgba(255,107,53,.15)}
+.pal-item svg{width:28px;height:32px;overflow:visible;pointer-events:none}
+.pal-item .lbl{font-size:7px;text-align:center;line-height:1;color:#888;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Canvas */
+#canvas-area{flex:1;position:relative;overflow:hidden}
+#canvas{position:absolute;top:0;left:0}
+.grid-line{stroke:var(--grid);stroke-width:.5}
+.grid-major{stroke:#d0cdc4;stroke-width:.8}
+.sym-group{cursor:move}
+.sym-group:hover .sym-bg{stroke:var(--orange);stroke-opacity:.3}
+.sym-group.selected .sym-bg{stroke:var(--orange);stroke-width:2;stroke-dasharray:4 2}
+.sym-group .pin-dot{fill:var(--orange);opacity:0;transition:.12s;cursor:crosshair}
+.sym-group:hover .pin-dot,.sym-group.selected .pin-dot{opacity:1}
+.pin-dot.connected{fill:var(--success);opacity:1}
+.wire{stroke:var(--navy);stroke-width:2.5;fill:none;cursor:pointer;stroke-linecap:round;stroke-linejoin:round}
+.wire:hover{stroke-width:4}
+.wire.selected{stroke-dasharray:6 3}
+.wire-preview{stroke:var(--orange);stroke-width:2;fill:none;stroke-dasharray:4 3;opacity:.5;pointer-events:none}
+.sym-label{font-size:9px;font-family:'Segoe UI',sans-serif;fill:#888;text-anchor:middle}
+
+/* ===== RIGHT PANEL ===== */
+#panel{width:300px;background:#fff;border-left:2px solid var(--navy);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.panel-header{background:var(--navy);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.panel-header h3{font-size:13px;flex:1}
+.panel-close{background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:0 4px}
+.panel-body{flex:1;overflow-y:auto;padding:14px}
+.panel-body .desc{font-size:12px;color:#555;line-height:1.5;margin-bottom:12px}
+.panel-actions{padding:10px 14px;border-top:1px solid #eee;display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
+.btn{padding:6px 14px;border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600;font-family:inherit;transition:.12s}
+.btn:hover{filter:brightness(1.1)}
+.btn-primary{background:var(--orange);color:#fff}
+.btn-success{background:var(--success);color:#fff}
+.btn-secondary{background:#e8e8e8;color:var(--navy)}
+.btn-sm{padding:4px 8px;font-size:10px}
+
+/* Steps */
+.step{display:flex;align-items:flex-start;gap:7px;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:11px}
+.step-num{width:20px;height:20px;border:2px solid #ddd;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+.step-num.done{border-color:var(--success);background:var(--success);color:#fff}
+.step-num.current{border-color:var(--orange);color:var(--orange)}
+.step-text{flex:1;line-height:1.4}.step-text.done{text-decoration:line-through;color:#bbb}
+
+/* Result */
+#result{margin:8px 14px;padding:10px;border-radius:8px;font-size:12px;display:none;line-height:1.5}
+#result.ok{display:block;background:#d5f5e3;color:#27ae60}
+#result.ko{display:block;background:#fadbd8;color:#c0392b}
+
+/* ===== COLOR PALETTE (for coloring mode) ===== */
+#color-bar{display:none;background:#fff;border-top:2px solid var(--navy);padding:6px 12px;flex-shrink:0;align-items:center;gap:8px}
+#color-bar.on{display:flex}
+#color-bar .lbl{font-size:11px;font-weight:700;margin-right:6px}
+.color-swatch{width:28px;height:28px;border-radius:6px;border:2px solid #ccc;cursor:pointer;transition:.15s;position:relative}
+.color-swatch:hover{transform:scale(1.15)}
+.color-swatch.active{border-color:var(--navy);box-shadow:0 0 0 2px var(--navy)}
+.color-swatch .tip{position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);font-size:8px;white-space:nowrap;color:#888;display:none}
+.color-swatch:hover .tip{display:block}
+.color-swatch.eraser{background:repeating-linear-gradient(45deg,#fff,#fff 3px,#eee 3px,#eee 6px);position:relative}
+.color-swatch.eraser::after{content:'X';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#ccc}
+
+/* ===== MODE INDICATOR ===== */
+.mode-badge{padding:3px 10px;border-radius:12px;font-size:10px;font-weight:700;display:inline-block;margin-bottom:8px}
+.mode-observer{background:#d5f5e3;color:#27ae60}
+.mode-colorier{background:#fef9e7;color:#f39c12}
+.mode-identifier{background:#d6eaf8;color:#2980b9}
+.mode-cabler{background:#fadbd8;color:#e74c3c}
+
+/* ===== CONTEXT MENU ===== */
+#ctx{display:none;position:fixed;background:#fff;border:1px solid #ccc;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:30;min-width:140px;padding:4px 0;font-size:12px}
+#ctx.on{display:block}
+#ctx div{padding:6px 14px;cursor:pointer}
+#ctx div:hover{background:rgba(255,107,53,.08)}
+#ctx .danger{color:var(--error)}
+
+/* ===== TOAST ===== */
+#toast{position:fixed;bottom:44px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:9px 18px;border-radius:8px;font-size:12px;opacity:0;transition:.3s;pointer-events:none;z-index:99;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+#toast.on{opacity:1}
+
+/* ===== VICTORY ===== */
+#victory{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:80;justify-content:center;align-items:center}
+#victory.on{display:flex}
+.victory-box{background:#fff;border-radius:16px;padding:28px;text-align:center;max-width:340px;width:90vw;animation:vpop .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes vpop{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
+.victory-box .trophy{font-size:44px;margin-bottom:8px}
+.victory-box h3{font-size:18px;margin-bottom:4px}
+.victory-box .stars-big{font-size:28px;letter-spacing:3px;margin:8px 0}
+.victory-box .xp-gain{background:var(--gold);color:var(--navy);padding:3px 10px;border-radius:10px;font-size:12px;font-weight:700;display:inline-block;margin-bottom:12px}
+.victory-box p{font-size:12px;color:#666;margin-bottom:14px}
+
+/* ===== INFO TOOLTIP ===== */
+#info-tip{display:none;position:fixed;background:#fff;border:2px solid var(--navy);border-radius:8px;padding:10px 14px;max-width:220px;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:25;font-size:11px;line-height:1.4}
+#info-tip.on{display:block}
+#info-tip h4{font-size:12px;margin-bottom:3px;color:var(--navy)}
+#info-tip .fam{font-size:9px;color:#aaa;margin-bottom:2px}
+
+/* ===== FOOTER ===== */
+#footer{background:var(--navy);color:#fff;font-size:10px;padding:0 12px;height:24px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+#footer .sep{width:1px;height:12px;background:rgba(255,255,255,.12)}
+
+@media(max-width:768px){
+  #sidebar{width:160px}
+  #panel{width:240px}
+  .level-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+}
+@media(max-width:600px){
+  #sidebar{display:none}
+  #panel{position:absolute;right:0;top:0;bottom:0;z-index:15;width:260px;box-shadow:-4px 0 12px rgba(0,0,0,.1)}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN SCREEN ===== -->
+<div id="login-screen" style="position:fixed;inset:0;background:linear-gradient(135deg,#1b3a63,#2c5f9e);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;transition:opacity .5s">
+  <div style="font-size:56px;filter:drop-shadow(0 4px 12px rgba(0,0,0,.3))">&#9889;</div>
+  <h1 style="font-size:clamp(24px,4vw,36px);margin:8px 0 4px;text-shadow:0 2px 8px rgba(0,0,0,.3)">inerWeb Schéma</h1>
+  <div style="font-size:13px;opacity:.7;margin-bottom:20px;text-align:center">Compagnon Électrotechnique &middot; LP Jacques Raynaud</div>
+  <div style="background:rgba(255,255,255,.1);border-radius:14px;padding:24px;width:90vw;max-width:340px;backdrop-filter:blur(6px)">
+    <div style="margin-bottom:12px">
+      <label style="font-size:11px;display:block;margin-bottom:3px;opacity:.7">Nom</label>
+      <input id="login-nom" type="text" style="width:100%;padding:8px 12px;border:none;border-radius:6px;font-size:14px;font-family:inherit;background:rgba(255,255,255,.9);color:#1b3a63" placeholder="DUPONT" autocomplete="off">
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:11px;display:block;margin-bottom:3px;opacity:.7">Prénom</label>
+      <input id="login-prenom" type="text" style="width:100%;padding:8px 12px;border:none;border-radius:6px;font-size:14px;font-family:inherit;background:rgba(255,255,255,.9);color:#1b3a63" placeholder="Jean" autocomplete="off">
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="font-size:11px;display:block;margin-bottom:3px;opacity:.7">Classe</label>
+      <select id="login-classe" style="width:100%;padding:8px 12px;border:none;border-radius:6px;font-size:14px;font-family:inherit;background:rgba(255,255,255,.9);color:#1b3a63">
+        <option value="">-- Choisis ta classe --</option>
+        <option>CAP 1 IFCA</option>
+        <option>CAP 2 IFCA</option>
+        <option>2nde TNE</option>
+        <option>1re TNE</option>
+        <option>Tle TNE</option>
+        <option>2nde MPI</option>
+        <option>1re MFER</option>
+        <option>Tle MFER</option>
+        <option>1re MV</option>
+        <option>Tle MV</option>
+        <option>BTS 1 FED</option>
+        <option>BTS 2 FED</option>
+        <option>Autre</option>
+      </select>
+    </div>
+    <button class="splash-btn" style="width:100%;margin:0" onclick="loginAndStart()">&#127891; C'est parti !</button>
+    <div style="text-align:center;margin-top:10px">
+      <button style="background:none;border:none;color:rgba(255,255,255,.4);font-size:10px;cursor:pointer;font-family:inherit;text-decoration:underline" onclick="openProf()">&#128274; Espace prof</button>
+    </div>
+  </div>
+  <div style="position:absolute;bottom:14px;font-size:10px;opacity:.4">F. Henninot &middot; LP Jacques Raynaud &middot; v002</div>
+</div>
+
+<!-- ===== PROF SCREEN ===== -->
+<div id="prof-screen" style="display:none;position:fixed;inset:0;background:#f5f5f0;z-index:150;overflow-y:auto;padding:20px">
+  <div style="max-width:800px;margin:0 auto">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+      <h2 style="flex:1">&#128274; Espace Professeur</h2>
+      <button class="btn btn-secondary" onclick="closeProf()">Fermer</button>
+    </div>
+    <div id="prof-content"></div>
+  </div>
+</div>
+
+<div id="splash" style="display:none"><!-- kept for compat --></div>
+
+<div id="app">
+  <div id="topbar">
+    <h1 onclick="showMap()">&#9889; inerWeb Schéma</h1>
+    <span class="badge">Edu</span>
+    <div class="tb" id="ed-tools" style="display:none">
+      <button onclick="showMap()">&#127891; Niveaux</button>
+      <span class="sep"></span>
+      <button onclick="undo()">&#8630;</button><button onclick="redo()">&#8631;</button>
+      <span class="sep"></span>
+      <button id="btn-select" class="active" onclick="setTool('select')">&#9754;</button>
+      <button id="btn-wire" onclick="setTool('wire')">&#9889; Fil</button>
+      <button id="btn-erase" onclick="setTool('erase')">&#10060;</button>
+      <button id="btn-color" onclick="setTool('color')">&#127912; Colorier</button>
+      <span class="sep"></span>
+      <button onclick="saveSchema()">&#128190;</button>
+      <button onclick="loadSchema()">&#128194;</button>
+    </div>
+    <span id="student-name" style="font-size:11px;opacity:.6;margin-left:8px"></span>
+    <div class="xp-bar">
+      <span class="lvl" id="player-lvl">Niv. 1</span>
+      <div class="xp-track"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div>
+      <span class="xp" id="xp-txt">0 XP</span>
+    </div>
+  </div>
+
+  <div id="content">
+    <div id="map-screen"></div>
+    <div id="activity">
+      <div id="sidebar">
+        <input type="text" id="pal-search" placeholder="&#128269; Rechercher..." oninput="filterPalette()">
+        <div id="pal-list"></div>
+      </div>
+      <div id="canvas-area"><svg id="canvas"></svg></div>
+      <div id="panel">
+        <div class="panel-header">
+          <h3 id="panel-title">Mission</h3>
+          <button class="panel-close" onclick="showMap()">&times;</button>
+        </div>
+        <div class="panel-body" id="panel-body"></div>
+        <div id="result"></div>
+        <div class="panel-actions" id="panel-actions"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="color-bar">
+    <span class="lbl">Couleur :</span>
+  </div>
+
+  <div id="footer">
+    <span id="st-tool">Sélection</span><span class="sep"></span>
+    <span id="st-pos"></span><span class="sep"></span>
+    <span id="st-info">Prêt</span>
+    <span style="margin-left:auto;opacity:.3">F. Henninot &middot; LP Jacques Raynaud &middot; v002</span>
+  </div>
+</div>
+
+<div id="ctx">
+  <div onclick="rotSel()">&#8635; Rotation</div>
+  <div onclick="mirSel()">&#8646; Miroir</div>
+  <div onclick="dupSel()">&#128203; Dupliquer</div>
+  <div class="danger" onclick="delSel()">&#10060; Supprimer</div>
+</div>
+<div id="toast"></div>
+<div id="info-tip"><h4 id="tip-nom"></h4><div class="fam" id="tip-fam"></div><div id="tip-desc"></div></div>
+
+<div id="victory" onclick="if(event.target===this)closeVictory()">
+  <div class="victory-box">
+    <div class="trophy" id="v-trophy">&#127942;</div>
+    <h3 id="v-title">Bravo !</h3>
+    <div class="stars-big" id="v-stars"></div>
+    <div class="xp-gain" id="v-xp">+50 XP</div>
+    <p id="v-msg"></p>
+    <div style="display:flex;gap:8px;justify-content:center">
+      <button class="btn btn-secondary" onclick="closeVictory();showMap()">&#127891; Niveaux</button>
+      <button class="btn btn-primary" id="v-next" onclick="closeVictory();nextLevel()">Suivant &#8594;</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ========================================================================
+   inerWeb Schéma v002 — Compagnon Électrotechnique
+   Progression 2 ans · Observer · Colorier · Identifier · Câbler
+   F. Henninot — LP Jacques Raynaud
+   ======================================================================== */
+
+const GRID=20, PIN_R=3.5, CW=4000, CH=3000, ZMIN=.25, ZMAX=3;
+const SCHEMA_FAMS=['sources','contacts','bobines','commande','protections','moteurs','recepteurs','capteurs_froid','fusibles','variateurs','transformateurs','electronique','generateurs','frigo_schema','unifilaire','hydraulique'];
+const FAM_FR={sources:"Sources",contacts:"Contacts",bobines:"Bobines & Tempos",commande:"Commande",protections:"Protections",moteurs:"Moteurs",recepteurs:"Signalisation",capteurs_froid:"Capteurs froid",fusibles:"Fusibles",variateurs:"Variateurs",transformateurs:"Transformateurs",electronique:"Électronique",generateurs:"Générateurs",frigo_schema:"Schémas frigo",unifilaire:"Unifilaire",hydraulique:"Hydraulique"};
+
+// ===== WIRE COLORS =====
+const WIRE_COLORS = [
+  {id:'phase_l1',  label:'Phase L1',    color:'#8B4513', short:'L1'},
+  {id:'phase_l2',  label:'Phase L2',    color:'#222',    short:'L2'},
+  {id:'phase_l3',  label:'Phase L3',    color:'#808080', short:'L3'},
+  {id:'neutre',    label:'Neutre (N)',   color:'#2980b9', short:'N'},
+  {id:'pe',        label:'Terre (PE)',   color:'#27ae60', short:'PE'},
+  {id:'cmd_24v',   label:'Commande 24V', color:'#e74c3c', short:'24V'},
+  {id:'cmd_retour',label:'Retour bobine',color:'#3498db', short:'Ret'},
+  {id:'navette',   label:'Navette',      color:'#9b59b6', short:'Nav'},
+  {id:'neutre_cmd',label:'Neutre cmd',   color:'#2980b9', short:'N cmd'},
+];
+const DEFAULT_WIRE = '#1b3a63';
+
+// ===== STUDENT IDENTITY =====
+let student = { nom:'', prenom:'', classe:'' };
+const PROF_CODE = 'LPPJR';
+
+// Compétences évaluées par ce module
+const COMPETENCES = {
+  C1: 'Identifier les composants',
+  C2: 'Lire un schéma',
+  C3: 'Réaliser un câblage',
+  C4: 'Analyser un circuit (couleurs)',
+};
+
+// ===== STATE =====
+let allSym=[], placed=[], wires=[], history=[], historyIdx=-1;
+let tool='select', selection=new Set(), wireStart=null, wirePreview=null;
+let dragState=null, panState=null, viewX=0, viewY=0, zoom=1, uidC=1;
+let curLevel=null, curMode=null, curSteps=[];
+let activeColorId=null; // for coloring mode
+let player={xp:0,level:1,completed:{}};
+const $=id=>document.getElementById(id);
+let svg,wrap;
+
+// ===== PROGRESSION 2 ANS =====
+const WORLDS=[
+{id:'bases',icon:'&#127793;',titre:'Les bases',desc:'Découverte des composants et premiers circuits.',
+levels:[
+  {id:'L01',titre:'Simple allumage',diff:'decouverte',xp:40,
+   desc:'Un interrupteur commande une lampe. Le circuit le plus simple.',
+   modes:['observer','colorier','cabler'],
+   schema:{
+     syms:[
+       {s:'source_1p_n',x:300,y:200,r:3,label:'Source Ph+N'},
+       {s:'disjoncteur_1p_n',x:300,y:320,r:0,label:'Q1'},
+       {s:'interrupteur',x:300,y:440,r:0,label:'S1'},
+       {s:'voyant_lumineux',x:300,y:560,r:0,label:'H1 Lampe'},
+     ],
+     wires:[
+       {pts:[{x:300,y:240},{x:300,y:290}], expected:'phase_l1', label:'Phase (source→Q1)'},
+       {pts:[{x:300,y:350},{x:300,y:420}], expected:'phase_l1', label:'Phase (Q1→S1)'},
+       {pts:[{x:300,y:460},{x:300,y:540}], expected:'phase_l1', label:'Phase commutée (S1→H1)'},
+       {pts:[{x:320,y:580},{x:360,y:580},{x:360,y:200},{x:320,y:200}], expected:'neutre', label:'Neutre (retour)'},
+     ]
+   },
+   steps_cabler:[
+     {text:'Place la source monophasée Ph+N',check:()=>placed.some(p=>p.symId.includes('source'))},
+     {text:'Place le disjoncteur de protection Q1',check:()=>placed.some(p=>p.symId.includes('disjoncteur'))},
+     {text:'Place l\'interrupteur S1',check:()=>placed.some(p=>['interrupteur','contact_no'].some(k=>p.symId.includes(k)))},
+     {text:'Place la lampe H1',check:()=>placed.some(p=>['voyant','lampe','signalisation','recepteur'].some(k=>p.symId.includes(k)))},
+     {text:'Câble le circuit complet',check:()=>wires.length>=3},
+   ],
+   hint:'La phase traverse Q1 puis S1 avant d\'arriver à la lampe. Le neutre retourne directement.',
+   quiz:[
+     {q:'Quel est le rôle du disjoncteur Q1 ?',opts:['Allumer la lampe','Protéger le circuit','Régler la luminosité'],ans:1},
+     {q:'Que se passe-t-il si on ouvre l\'interrupteur S1 ?',opts:['Court-circuit','La lampe s\'éteint','Le disjoncteur saute'],ans:1},
+   ]
+  },
+  {id:'L02',titre:'Double allumage',diff:'facile',xp:50,
+   desc:'Deux interrupteurs commandent chacun une lampe indépendante.',
+   modes:['observer','colorier','cabler'],
+   schema:{
+     syms:[
+       {s:'source_1p_n',x:300,y:200,r:3,label:'Source'},
+       {s:'disjoncteur_1p_n',x:300,y:320,r:0,label:'Q1'},
+       {s:'interrupteur',x:240,y:440,r:0,label:'S1'},
+       {s:'interrupteur',x:360,y:440,r:0,label:'S2'},
+       {s:'voyant_lumineux',x:240,y:560,r:0,label:'H1'},
+       {s:'voyant_vert',x:360,y:560,r:0,label:'H2'},
+     ],
+     wires:[
+       {pts:[{x:300,y:240},{x:300,y:290}],expected:'phase_l1',label:'Phase source→Q1'},
+       {pts:[{x:300,y:350},{x:300,y:400},{x:240,y:400},{x:240,y:420}],expected:'phase_l1',label:'Phase Q1→S1'},
+       {pts:[{x:300,y:400},{x:360,y:400},{x:360,y:420}],expected:'phase_l1',label:'Phase Q1→S2'},
+       {pts:[{x:240,y:460},{x:240,y:540}],expected:'phase_l1',label:'S1→H1'},
+       {pts:[{x:360,y:460},{x:360,y:540}],expected:'phase_l1',label:'S2→H2'},
+       {pts:[{x:240,y:580},{x:240,y:620},{x:360,y:620},{x:360,y:580}],expected:'neutre',label:'Neutre H1-H2'},
+       {pts:[{x:300,y:620},{x:400,y:620},{x:400,y:200},{x:320,y:200}],expected:'neutre',label:'Neutre retour'},
+     ]
+   },
+   steps_cabler:[
+     {text:'Place la source et la protection',check:()=>placed.some(p=>p.symId.includes('source'))&&placed.some(p=>p.symId.includes('disjoncteur'))},
+     {text:'Place 2 interrupteurs S1 et S2',check:()=>placed.filter(p=>['interrupteur','contact_no'].some(k=>p.symId.includes(k))).length>=2},
+     {text:'Place 2 lampes H1 et H2',check:()=>placed.filter(p=>['voyant','lampe','recepteur'].some(k=>p.symId.includes(k))).length>=2},
+     {text:'Câble les 2 circuits en dérivation',check:()=>wires.length>=5},
+   ],
+   hint:'Les 2 circuits S1-H1 et S2-H2 sont en parallèle après le disjoncteur.',
+  },
+  {id:'L03',titre:'Va-et-vient',diff:'facile',xp:60,
+   desc:'Commander une lampe depuis 2 endroits avec des inverseurs.',
+   modes:['observer','colorier','cabler'],
+   schema:{
+     syms:[
+       {s:'source_1p_n',x:300,y:180,r:3,label:'Source'},
+       {s:'disjoncteur_1p_n',x:300,y:300,r:0,label:'Q1'},
+       {s:'va_et_vient',x:200,y:440,r:0,label:'S1'},
+       {s:'va_et_vient',x:400,y:440,r:0,label:'S2'},
+       {s:'voyant_lumineux',x:400,y:580,r:0,label:'H1'},
+     ],
+     wires:[
+       {pts:[{x:300,y:220},{x:300,y:270}],expected:'phase_l1',label:'Phase→Q1'},
+       {pts:[{x:300,y:330},{x:200,y:330},{x:200,y:420}],expected:'phase_l1',label:'Q1→S1'},
+       {pts:[{x:200,y:440},{x:260,y:400},{x:340,y:400},{x:400,y:440}],expected:'navette',label:'Navette 1'},
+       {pts:[{x:200,y:460},{x:260,y:480},{x:340,y:480},{x:400,y:460}],expected:'navette',label:'Navette 2'},
+       {pts:[{x:400,y:460},{x:400,y:560}],expected:'phase_l1',label:'S2→H1'},
+       {pts:[{x:400,y:600},{x:400,y:640},{x:460,y:640},{x:460,y:180},{x:320,y:180}],expected:'neutre',label:'Neutre retour'},
+     ]
+   },
+   steps_cabler:[
+     {text:'Place la source et le disjoncteur',check:()=>placed.some(p=>p.symId.includes('source'))&&placed.some(p=>p.symId.includes('disjoncteur'))},
+     {text:'Place 2 inverseurs (va-et-vient)',check:()=>placed.filter(p=>p.symId.includes('va_et_vient')||p.symId.includes('inverseur')).length>=2},
+     {text:'Place la lampe',check:()=>placed.some(p=>['voyant','lampe','recepteur'].some(k=>p.symId.includes(k)))},
+     {text:'Câble les navettes entre les 2 inverseurs',check:()=>wires.length>=4},
+   ],
+   hint:'Les 2 navettes relient les inverseurs. La phase arrive sur le commun de S1, le commun de S2 va à la lampe.',
+  },
+]},
+{id:'impulsion',icon:'&#128276;',titre:'Commande par impulsion',desc:'Télérupteur, minuterie, temporisation...',
+levels:[
+  {id:'L04',titre:'Télérupteur',diff:'moyen',xp:70,
+   desc:'3 boutons poussoirs commandent une lampe par impulsions via un télérupteur.',
+   modes:['observer','colorier','cabler'],
+   schema:{
+     syms:[
+       {s:'source_1p_n',x:300,y:180,r:3,label:'Source'},
+       {s:'disjoncteur_1p_n',x:300,y:300,r:0,label:'Q1'},
+       {s:'bp_no_marche',x:160,y:440,r:0,label:'S1'},
+       {s:'bp_no_marche',x:300,y:440,r:0,label:'S2'},
+       {s:'bp_no_marche',x:440,y:440,r:0,label:'S3'},
+       {s:'telerupteur',x:300,y:560,r:0,label:'TE1'},
+       {s:'voyant_lumineux',x:300,y:680,r:0,label:'H1'},
+     ],
+     wires:[
+       {pts:[{x:300,y:220},{x:300,y:270}],expected:'phase_l1',label:'Phase→Q1'},
+       {pts:[{x:300,y:330},{x:300,y:380},{x:160,y:380},{x:160,y:420}],expected:'phase_l1',label:'Phase→S1'},
+       {pts:[{x:300,y:380},{x:300,y:420}],expected:'phase_l1',label:'Phase→S2'},
+       {pts:[{x:300,y:380},{x:440,y:380},{x:440,y:420}],expected:'phase_l1',label:'Phase→S3'},
+       {pts:[{x:160,y:460},{x:160,y:500},{x:300,y:500},{x:300,y:540}],expected:'cmd_24v',label:'BP→bobine TE'},
+       {pts:[{x:300,y:460},{x:300,y:500}],expected:'cmd_24v',label:'S2→bobine TE'},
+       {pts:[{x:440,y:460},{x:440,y:500},{x:300,y:500}],expected:'cmd_24v',label:'S3→bobine TE'},
+       {pts:[{x:300,y:580},{x:300,y:660}],expected:'phase_l1',label:'Contact TE→H1'},
+       {pts:[{x:300,y:700},{x:300,y:740},{x:500,y:740},{x:500,y:180},{x:320,y:180}],expected:'neutre',label:'Neutre retour'},
+     ]
+   },
+   steps_cabler:[
+     {text:'Place la source et le disjoncteur',check:()=>placed.some(p=>p.symId.includes('source'))&&placed.some(p=>p.symId.includes('disjoncteur'))},
+     {text:'Place 3 boutons poussoirs NO en parallèle',check:()=>placed.filter(p=>['bp_no','contact_no'].some(k=>p.symId.includes(k))).length>=3},
+     {text:'Place le télérupteur (bobine)',check:()=>placed.some(p=>p.symId.includes('telerupteur')||p.symId.includes('bobine'))},
+     {text:'Place la lampe H1',check:()=>placed.some(p=>['voyant','lampe','recepteur'].some(k=>p.symId.includes(k)))},
+     {text:'Câble tout le circuit',check:()=>wires.length>=5},
+   ],
+   hint:'Les 3 BP sont en parallèle pour piloter la bobine. Le contact du télérupteur alimente la lampe.',
+  },
+]},
+{id:'industriel',icon:'&#9881;',titre:'Commande industrielle',desc:'Marche/arrêt, auto-maintien, chaîne de sécurité moteur.',
+levels:[
+  {id:'L05',titre:'Marche/Arrêt + Auto-maintien',diff:'moyen',xp:80,
+   desc:'Le circuit fondamental : BP Arrêt (NF) + BP Marche (NO) + bobine relais + auto-maintien.',
+   modes:['observer','colorier','cabler'],
+   schema:{
+     syms:[
+       {s:'source_1p_n',x:300,y:160,r:3,label:'Source 24V'},
+       {s:'disjoncteur_1p_n',x:300,y:260,r:0,label:'Q'},
+       {s:'bp_nf_arret',x:300,y:380,r:0,label:'S1 Arrêt'},
+       {s:'bp_no_marche',x:300,y:480,r:0,label:'S2 Marche'},
+       {s:'contact_no_13_14',x:380,y:480,r:0,label:'KA1 13-14'},
+       {s:'bobine_contacteur',x:300,y:600,r:0,label:'KA1'},
+     ],
+     wires:[
+       {pts:[{x:300,y:200},{x:300,y:230}],expected:'cmd_24v',label:'24V→Q'},
+       {pts:[{x:300,y:290},{x:300,y:360}],expected:'cmd_24v',label:'Q→S1(NF)'},
+       {pts:[{x:300,y:400},{x:300,y:460}],expected:'cmd_24v',label:'S1→S2(NO)'},
+       {pts:[{x:380,y:450},{x:380,y:420},{x:300,y:420},{x:300,y:400}],expected:'cmd_24v',label:'Auto-maintien (haut)'},
+       {pts:[{x:300,y:500},{x:300,y:580}],expected:'cmd_24v',label:'S2→bobine KA1'},
+       {pts:[{x:380,y:510},{x:380,y:580},{x:320,y:580}],expected:'cmd_24v',label:'KA1(13-14)→bobine'},
+       {pts:[{x:300,y:620},{x:300,y:660},{x:420,y:660},{x:420,y:160},{x:320,y:160}],expected:'neutre_cmd',label:'Neutre commande (retour)'},
+     ]
+   },
+   steps_cabler:[
+     {text:'Place la source 24V et la protection',check:()=>placed.some(p=>p.symId.includes('source'))&&placed.some(p=>p.symId.includes('disjoncteur'))},
+     {text:'Place le BP Arrêt S1 (contact NF)',check:()=>placed.some(p=>p.symId.includes('bp_nf')||p.symId.includes('contact_nf'))},
+     {text:'Place le BP Marche S2 (contact NO)',check:()=>placed.some(p=>p.symId.includes('bp_no'))},
+     {text:'Place la bobine du relais KA1',check:()=>placed.some(p=>p.symId.includes('bobine'))},
+     {text:'Ajoute le contact d\'auto-maintien KA1 (NO) en parallèle sur S2',check:()=>placed.filter(p=>['contact_no','bp_no'].some(k=>p.symId.includes(k))).length>=2},
+     {text:'Câble le circuit complet',check:()=>wires.length>=5},
+   ],
+   hint:'S1(NF) en série → S2(NO) en parallèle avec KA1(13-14) → bobine KA1. L\'auto-maintien ferme le circuit quand on lâche S2.',
+  },
+  {id:'L06',titre:'Démarrage direct — Puissance',diff:'moyen',xp:80,
+   desc:'La chaîne de puissance : sectionneur → contacteur → relais thermique → moteur triphasé.',
+   modes:['observer','colorier','cabler'],
+   schema:{
+     syms:[
+       {s:'source_3p',x:300,y:160,r:3,label:'Réseau 3~'},
+       {s:'sectionneur_3p',x:300,y:300,r:0,label:'Q1'},
+       {s:'contact_puissance_3p_no',x:300,y:440,r:0,label:'KM1'},
+       {s:'relais_thermique',x:300,y:560,r:0,label:'F1'},
+       {s:'moteur_triphase',x:300,y:700,r:0,label:'M1'},
+     ],
+     wires:[
+       {pts:[{x:280,y:200},{x:280,y:270}],expected:'phase_l1',label:'L1→Q1'},
+       {pts:[{x:300,y:200},{x:300,y:270}],expected:'phase_l2',label:'L2→Q1'},
+       {pts:[{x:320,y:200},{x:320,y:270}],expected:'phase_l3',label:'L3→Q1'},
+       {pts:[{x:280,y:330},{x:280,y:410}],expected:'phase_l1',label:'Q1→KM1 (L1)'},
+       {pts:[{x:300,y:330},{x:300,y:410}],expected:'phase_l2',label:'Q1→KM1 (L2)'},
+       {pts:[{x:320,y:330},{x:320,y:410}],expected:'phase_l3',label:'Q1→KM1 (L3)'},
+       {pts:[{x:280,y:460},{x:280,y:530}],expected:'phase_l1',label:'KM1→F1 (L1)'},
+       {pts:[{x:300,y:460},{x:300,y:530}],expected:'phase_l2',label:'KM1→F1 (L2)'},
+       {pts:[{x:320,y:460},{x:320,y:530}],expected:'phase_l3',label:'KM1→F1 (L3)'},
+       {pts:[{x:280,y:590},{x:280,y:670}],expected:'phase_l1',label:'F1→M1 (U)'},
+       {pts:[{x:300,y:590},{x:300,y:670}],expected:'phase_l2',label:'F1→M1 (V)'},
+       {pts:[{x:320,y:590},{x:320,y:670}],expected:'phase_l3',label:'F1→M1 (W)'},
+     ]
+   },
+   steps_cabler:[
+     {text:'Place la source triphasée 3~',check:()=>placed.some(p=>p.symId.includes('source_3p'))},
+     {text:'Place le sectionneur Q1',check:()=>placed.some(p=>p.symId.includes('sectionneur'))},
+     {text:'Place le contacteur de puissance KM1',check:()=>placed.some(p=>p.symId.includes('contact_puissance'))},
+     {text:'Place le relais thermique F1',check:()=>placed.some(p=>p.symId.includes('relais_therm'))},
+     {text:'Place le moteur triphasé M1',check:()=>placed.some(p=>p.symId.includes('moteur_triphase'))},
+     {text:'Câble les 3 phases L1/L2/L3',check:()=>wires.length>=6},
+   ],
+   hint:'Les 3 phases traversent chaque appareil en série : Source → Q1 → KM1 → F1 → M1.',
+  },
+  {id:'L07',titre:'Démarrage direct — Commande',diff:'moyen',xp:90,
+   desc:'Le circuit de commande : transfo + BP arrêt + BP marche + auto-maintien + bobine KM1.',
+   modes:['observer','colorier','cabler'],
+   schema:{
+     syms:[
+       {s:'transfo_monophase',x:200,y:200,r:0,label:'T1 400/24V'},
+       {s:'disjoncteur_1p',x:200,y:340,r:0,label:'Q2'},
+       {s:'bp_nf_arret',x:200,y:460,r:0,label:'S1 Arrêt'},
+       {s:'bp_no_marche',x:200,y:560,r:0,label:'S2 Marche'},
+       {s:'contact_no_13_14',x:300,y:560,r:0,label:'KM1 13-14'},
+       {s:'bobine_contacteur',x:200,y:680,r:0,label:'KM1'},
+       {s:'voyant_vert',x:360,y:680,r:0,label:'H1'},
+     ],
+     wires:[
+       {pts:[{x:200,y:240},{x:200,y:310}],expected:'cmd_24v',label:'24V→Q2'},
+       {pts:[{x:200,y:370},{x:200,y:440}],expected:'cmd_24v',label:'Q2→S1'},
+       {pts:[{x:200,y:480},{x:200,y:540}],expected:'cmd_24v',label:'S1→S2'},
+       {pts:[{x:300,y:530},{x:300,y:500},{x:200,y:500}],expected:'cmd_24v',label:'Auto-maintien haut'},
+       {pts:[{x:200,y:580},{x:200,y:660}],expected:'cmd_24v',label:'S2→bobine KM1'},
+       {pts:[{x:300,y:590},{x:300,y:660},{x:220,y:660}],expected:'cmd_24v',label:'KM1(13-14)→bobine'},
+       {pts:[{x:300,y:660},{x:360,y:660}],expected:'cmd_24v',label:'→H1'},
+       {pts:[{x:200,y:700},{x:200,y:740},{x:360,y:740},{x:360,y:700}],expected:'neutre_cmd',label:'Neutre commande'},
+       {pts:[{x:360,y:740},{x:420,y:740},{x:420,y:200},{x:220,y:200}],expected:'neutre_cmd',label:'Retour transfo'},
+     ]
+   },
+   steps_cabler:[
+     {text:'Place le transformateur T1 (400/24V)',check:()=>placed.some(p=>p.symId.includes('transfo'))},
+     {text:'Place la protection commande Q2',check:()=>placed.some(p=>p.symId.includes('disjoncteur'))},
+     {text:'Place S1 Arrêt (NF) + S2 Marche (NO)',check:()=>placed.some(p=>p.symId.includes('bp_nf'))&&placed.some(p=>p.symId.includes('bp_no'))},
+     {text:'Place la bobine KM1',check:()=>placed.some(p=>p.symId.includes('bobine'))},
+     {text:'Ajoute l\'auto-maintien KM1(13-14) en parallèle sur S2',check:()=>placed.filter(p=>['contact_no','bp_no'].some(k=>p.symId.includes(k))).length>=2},
+     {text:'Câble le circuit',check:()=>wires.length>=6},
+   ],
+   hint:'Circuit série : T1 → Q2 → S1(NF) → [S2(NO) // KM1(13-14)] → bobine KM1.',
+  },
+  {id:'L08',titre:'Inversion de sens',diff:'difficile',xp:120,
+   desc:'2 contacteurs KM1/KM2 inversent 2 phases. Verrouillage électrique obligatoire.',
+   modes:['observer','colorier','cabler'],
+   schema:{
+     syms:[
+       {s:'source_3p',x:300,y:120,r:3,label:'3~'},
+       {s:'sectionneur_3p',x:300,y:240,r:0,label:'Q1'},
+       {s:'contact_puissance_3p_no',x:200,y:380,r:0,label:'KM1 AV'},
+       {s:'contact_puissance_3p_no',x:400,y:380,r:0,label:'KM2 AR'},
+       {s:'relais_thermique',x:300,y:520,r:0,label:'F1'},
+       {s:'moteur_triphase',x:300,y:660,r:0,label:'M1'},
+     ],
+     wires:[
+       {pts:[{x:280,y:160},{x:280,y:210}],expected:'phase_l1',label:'L1→Q1'},
+       {pts:[{x:300,y:160},{x:300,y:210}],expected:'phase_l2',label:'L2→Q1'},
+       {pts:[{x:320,y:160},{x:320,y:210}],expected:'phase_l3',label:'L3→Q1'},
+       {pts:[{x:280,y:270},{x:280,y:310},{x:200,y:310},{x:200,y:350}],expected:'phase_l1',label:'Q1→KM1 L1'},
+       {pts:[{x:300,y:270},{x:300,y:350}],expected:'phase_l2',label:'Q1→KM1 L2 (direct)'},
+       {pts:[{x:320,y:270},{x:320,y:310},{x:400,y:310}],expected:'phase_l3',label:'Q1→KM2 L3'},
+       {pts:[{x:200,y:410},{x:200,y:490},{x:280,y:490}],expected:'phase_l1',label:'KM1→F1 (L1→U)'},
+       {pts:[{x:300,y:410},{x:300,y:490}],expected:'phase_l2',label:'→F1 (L2→V)'},
+       {pts:[{x:400,y:410},{x:400,y:490},{x:320,y:490}],expected:'phase_l3',label:'KM2→F1 (L3→W)'},
+       {pts:[{x:280,y:550},{x:280,y:630}],expected:'phase_l1',label:'F1→M1'},
+       {pts:[{x:300,y:550},{x:300,y:630}],expected:'phase_l2',label:'F1→M1'},
+       {pts:[{x:320,y:550},{x:320,y:630}],expected:'phase_l3',label:'F1→M1'},
+     ]
+   },
+   steps_cabler:[
+     {text:'Place source 3~ + sectionneur Q1',check:()=>placed.some(p=>p.symId.includes('source_3p'))&&placed.some(p=>p.symId.includes('sectionneur'))},
+     {text:'Place 2 contacteurs de puissance KM1 et KM2',check:()=>placed.filter(p=>p.symId.includes('contact_puissance')).length>=2},
+     {text:'Place le relais thermique F1',check:()=>placed.some(p=>p.symId.includes('relais'))},
+     {text:'Place le moteur M1',check:()=>placed.some(p=>p.symId.includes('moteur'))},
+     {text:'Câble : KM2 inverse L1 et L3',check:()=>wires.length>=8},
+   ],
+   hint:'KM1 connecte L1-L2-L3 normalement. KM2 croise L1↔L3 pour inverser le sens.',
+  },
+]},
+{id:'froid',icon:'&#10052;',titre:'Froid & climatique',desc:'Pressostats, thermostat, pump down, dégivrage...',
+levels:[
+  {id:'L09',titre:'Circuit frigo simple',diff:'moyen',xp:90,
+   desc:'Thermostat + pressostat BP en série commandent le contacteur du compresseur.',
+   modes:['observer','colorier','cabler'],
+   schema:{
+     syms:[
+       {s:'source_1p_n',x:200,y:160,r:3,label:'Source'},
+       {s:'disjoncteur_1p_n',x:200,y:280,r:0,label:'Q1'},
+       {s:'thermostat_nf',x:200,y:400,r:0,label:'B1 Therm.'},
+       {s:'pressostat_nf',x:200,y:500,r:0,label:'B2 Press.BP'},
+       {s:'bobine_contacteur',x:200,y:620,r:0,label:'KM1'},
+       {s:'voyant_vert',x:340,y:620,r:0,label:'H1 Marche'},
+     ],
+     wires:[
+       {pts:[{x:200,y:200},{x:200,y:250}],expected:'phase_l1',label:'Phase→Q1'},
+       {pts:[{x:200,y:310},{x:200,y:380}],expected:'phase_l1',label:'Q1→Thermostat'},
+       {pts:[{x:200,y:420},{x:200,y:480}],expected:'phase_l1',label:'Therm.→Presso BP'},
+       {pts:[{x:200,y:520},{x:200,y:600}],expected:'phase_l1',label:'Presso→KM1'},
+       {pts:[{x:220,y:600},{x:340,y:600}],expected:'phase_l1',label:'→H1'},
+       {pts:[{x:200,y:640},{x:200,y:680},{x:340,y:680},{x:340,y:640}],expected:'neutre',label:'Neutre'},
+       {pts:[{x:340,y:680},{x:400,y:680},{x:400,y:160},{x:220,y:160}],expected:'neutre',label:'Neutre retour'},
+     ]
+   },
+   steps_cabler:[
+     {text:'Place la source et la protection',check:()=>placed.some(p=>p.symId.includes('source'))&&placed.some(p=>p.symId.includes('disjoncteur'))},
+     {text:'Place le thermostat de chambre B1 (NF)',check:()=>placed.some(p=>p.symId.includes('thermostat'))},
+     {text:'Place le pressostat BP B2 (NF)',check:()=>placed.some(p=>p.symId.includes('pressostat'))},
+     {text:'Place la bobine du contacteur KM1',check:()=>placed.some(p=>p.symId.includes('bobine'))},
+     {text:'Câble en série : therm. → presso → bobine',check:()=>wires.length>=4},
+   ],
+   hint:'Thermostat et pressostat BP sont des contacts NF en série. Si l\'un s\'ouvre, le compresseur s\'arrête.',
+  },
+  {id:'L10',titre:'Pump Down',diff:'difficile',xp:130,
+   desc:'L\'électrovanne est pilotée par le thermostat. Le pressostat BP fait le pump down du compresseur.',
+   modes:['observer','colorier','cabler'],
+   schema:{
+     syms:[
+       {s:'source_1p_n',x:200,y:120,r:3,label:'Source'},
+       {s:'disjoncteur_1p_n',x:200,y:240,r:0,label:'Q1'},
+       {s:'thermostat_nf',x:200,y:360,r:0,label:'B1 Therm.'},
+       {s:'bobine_contacteur',x:200,y:480,r:0,label:'EV'},
+       {s:'pressostat_nf',x:400,y:360,r:0,label:'B2 Press.BP'},
+       {s:'pressostat_nf',x:400,y:460,r:0,label:'B3 Press.HP'},
+       {s:'bobine_contacteur',x:400,y:580,r:0,label:'KM1 Comp.'},
+       {s:'voyant_vert',x:500,y:580,r:0,label:'H1'},
+     ],
+     wires:[
+       {pts:[{x:200,y:160},{x:200,y:210}],expected:'phase_l1',label:'Phase→Q1'},
+       {pts:[{x:200,y:270},{x:200,y:340}],expected:'phase_l1',label:'Q1→Therm.'},
+       {pts:[{x:200,y:380},{x:200,y:460}],expected:'phase_l1',label:'Therm.→EV'},
+       {pts:[{x:200,y:270},{x:200,y:300},{x:400,y:300},{x:400,y:340}],expected:'phase_l1',label:'Q1→Presso BP'},
+       {pts:[{x:400,y:380},{x:400,y:440}],expected:'phase_l1',label:'BP→HP'},
+       {pts:[{x:400,y:480},{x:400,y:560}],expected:'phase_l1',label:'HP→KM1'},
+       {pts:[{x:420,y:560},{x:500,y:560}],expected:'phase_l1',label:'→H1'},
+       {pts:[{x:200,y:500},{x:200,y:540},{x:500,y:540},{x:500,y:600}],expected:'neutre',label:'Neutre EV/H1'},
+       {pts:[{x:400,y:600},{x:400,y:640},{x:500,y:640},{x:560,y:640},{x:560,y:120},{x:220,y:120}],expected:'neutre',label:'Neutre retour'},
+     ]
+   },
+   steps_cabler:[
+     {text:'Place la source et la protection',check:()=>placed.some(p=>p.symId.includes('source'))&&placed.some(p=>p.symId.includes('disjoncteur'))},
+     {text:'Circuit EV : thermostat → électrovanne (bobine)',check:()=>placed.some(p=>p.symId.includes('thermostat'))},
+     {text:'Circuit compresseur : pressostat BP → pressostat HP → bobine KM1',check:()=>placed.filter(p=>p.symId.includes('pressostat')||p.symId.includes('capteur')).length>=2},
+     {text:'Place la bobine EV et la bobine KM1',check:()=>placed.filter(p=>p.symId.includes('bobine')).length>=2},
+     {text:'Câble les 2 circuits indépendants',check:()=>wires.length>=6},
+   ],
+   hint:'2 circuits parallèles après Q1 : 1) Therm.→EV et 2) Presso BP→HP→KM1. Quand le therm. coupe, l\'EV se ferme, la pression descend, le BP coupe KM1.',
+  },
+]},
+{id:'tp',icon:'&#128736;',titre:'TP spéciaux',desc:'Étoile-triangle, dégivrage, régulation pressostatique...',
+levels:[
+  {id:'L11',titre:'Étoile-Triangle',diff:'expert',xp:160,
+   desc:'Démarrage en étoile puis basculement en triangle après temporisation.',
+   modes:['observer','colorier','cabler'],
+   schema:{
+     syms:[
+       {s:'source_3p',x:300,y:100,r:3,label:'3~'},
+       {s:'sectionneur_3p',x:300,y:220,r:0,label:'Q1'},
+       {s:'contact_puissance_3p_no',x:300,y:360,r:0,label:'KM2 Ligne'},
+       {s:'relais_thermique',x:300,y:480,r:0,label:'F1'},
+       {s:'contact_puissance_3p_no',x:160,y:600,r:0,label:'KM1 Étoile'},
+       {s:'contact_puissance_3p_no',x:440,y:600,r:0,label:'KM3 Triangle'},
+       {s:'moteur_triphase',x:300,y:740,r:0,label:'M1'},
+     ],
+     wires:[
+       {pts:[{x:280,y:140},{x:280,y:190}],expected:'phase_l1',label:'L1'},
+       {pts:[{x:300,y:140},{x:300,y:190}],expected:'phase_l2',label:'L2'},
+       {pts:[{x:320,y:140},{x:320,y:190}],expected:'phase_l3',label:'L3'},
+       {pts:[{x:280,y:250},{x:280,y:330}],expected:'phase_l1',label:'Q1→KM2'},
+       {pts:[{x:300,y:250},{x:300,y:330}],expected:'phase_l2',label:'Q1→KM2'},
+       {pts:[{x:320,y:250},{x:320,y:330}],expected:'phase_l3',label:'Q1→KM2'},
+       {pts:[{x:280,y:390},{x:280,y:450}],expected:'phase_l1',label:'KM2→F1'},
+       {pts:[{x:300,y:390},{x:300,y:450}],expected:'phase_l2',label:'KM2→F1'},
+       {pts:[{x:320,y:390},{x:320,y:450}],expected:'phase_l3',label:'KM2→F1'},
+       {pts:[{x:280,y:510},{x:280,y:710}],expected:'phase_l1',label:'F1→M1(U)'},
+       {pts:[{x:300,y:510},{x:300,y:710}],expected:'phase_l2',label:'F1→M1(V)'},
+       {pts:[{x:320,y:510},{x:320,y:710}],expected:'phase_l3',label:'F1→M1(W)'},
+     ]
+   },
+   steps_cabler:[
+     {text:'Place source + sectionneur Q1',check:()=>placed.some(p=>p.symId.includes('source'))&&placed.some(p=>p.symId.includes('sectionneur'))},
+     {text:'Place KM2 (ligne) + F1',check:()=>placed.some(p=>p.symId.includes('contact_puissance'))&&placed.some(p=>p.symId.includes('relais'))},
+     {text:'Place KM1 (étoile) et KM3 (triangle)',check:()=>placed.filter(p=>p.symId.includes('contact_puissance')).length>=3},
+     {text:'Place le moteur M1',check:()=>placed.some(p=>p.symId.includes('moteur'))},
+     {text:'Câble le circuit',check:()=>wires.length>=9},
+   ],
+   hint:'KM2(ligne) est toujours en série. Au démarrage KM1 court-circuite les bornes moteur (étoile). Après tempo, KM1 s\'ouvre et KM3 connecte en triangle.',
+  },
+]},
+];
+
+// ===== INIT =====
+function init(){
+  const raw=typeof INERWEB_DATA==='string'?JSON.parse(INERWEB_DATA):INERWEB_DATA;
+  allSym=raw.filter(s=>SCHEMA_FAMS.includes(s.famille)).map(s=>{
+    const pins=[];const re=/<circle\s+cx="([^"]+)"\s+cy="([^"]+)"\s+r="([^"]+)"/g;let m;
+    while((m=re.exec(s.svg_sans))!==null){if(parseFloat(m[3])<=2.5)pins.push({x:parseFloat(m[1]),y:parseFloat(m[2])});}
+    return{...s,pins};
+  });
+  svg=$('canvas');wrap=$('canvas-area');
+  buildPalette();initCanvas();restoreLastLogin();
+  window.addEventListener('keydown',onKey);
+  wrap.addEventListener('contextmenu',e=>{e.preventDefault();showCtx(e)});
+  document.addEventListener('click',()=>hideCtx());
+  window.addEventListener('resize',()=>updateView());
+  buildColorBar();
+}
+
+// ===== LOGIN =====
+function loginAndStart(){
+  const nom=$('login-nom').value.trim().toUpperCase();
+  const prenom=$('login-prenom').value.trim();
+  const classe=$('login-classe').value;
+  if(!nom||!prenom){toast('Remplis ton nom et prénom !');return}
+  if(!classe){toast('Choisis ta classe !');return}
+  student={nom,prenom,classe};
+  // Save last login
+  try{localStorage.setItem('iwS_lastLogin',JSON.stringify(student))}catch(e){}
+  // Load this student's progression
+  loadPlayer();
+  $('student-name').textContent=prenom+' '+nom+' — '+classe;
+  $('login-screen').style.opacity='0';
+  setTimeout(()=>{$('login-screen').style.display='none';$('app').classList.add('on');showMap()},500);
+  toast('Bienvenue '+prenom+' !');
+}
+
+function start(mode){
+  $('app').classList.add('on');
+  if(mode==='free')openFree();else showMap();
+}
+
+// Restore last login on page load
+function restoreLastLogin(){
+  try{
+    const s=localStorage.getItem('iwS_lastLogin');
+    if(s){const d=JSON.parse(s);$('login-nom').value=d.nom||'';$('login-prenom').value=d.prenom||'';$('login-classe').value=d.classe||''}
+  }catch(e){}
+}
+
+// ===== PROF =====
+function openProf(){
+  const code=prompt('Code professeur :');
+  if(code!==PROF_CODE){if(code!==null)toast('Code incorrect');return}
+  $('prof-screen').style.display='block';
+  renderProfPage();
+}
+function closeProf(){$('prof-screen').style.display='none'}
+function renderProfPage(){
+  const el=$('prof-content');
+  // Gather all student data from localStorage
+  const allKeys=[];
+  try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith('iwS_'))allKeys.push(k)}}catch(e){}
+  const students=[];
+  allKeys.forEach(k=>{
+    if(k==='iwS_lastLogin')return;
+    try{
+      const d=JSON.parse(localStorage.getItem(k));
+      if(d.student)students.push({key:k,...d});
+    }catch(e){}
+  });
+
+  let html='<div style="background:#fff;border-radius:10px;padding:16px;margin-bottom:16px">';
+  html+='<h3 style="font-size:14px;margin-bottom:10px">&#128202; Résultats par élève ('+students.length+' élève(s))</h3>';
+
+  if(students.length===0){
+    html+='<p style="color:#888;font-size:12px">Aucun résultat enregistré pour le moment.</p>';
+  }else{
+    // Group by class
+    const byClass={};
+    students.forEach(s=>{const c=s.student.classe||'?';if(!byClass[c])byClass[c]=[];byClass[c].push(s)});
+
+    Object.keys(byClass).sort().forEach(cls=>{
+      html+=`<h4 style="font-size:13px;margin:12px 0 6px;color:#1b3a63">&#127891; ${cls}</h4>`;
+      html+='<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px">';
+      html+='<tr style="background:#1b3a63;color:#fff"><th style="padding:4px 8px;text-align:left">Élève</th><th>XP</th><th>Niv.</th><th>Niveaux réussis</th><th>Dernière activité</th></tr>';
+      byClass[cls].forEach(s=>{
+        const nDone=Object.keys(s.completed||{}).length;
+        const totalStars=Object.values(s.completed||{}).reduce((sum,v)=>sum+(v.stars||0),0);
+        html+=`<tr style="border-bottom:1px solid #eee">
+          <td style="padding:4px 8px;font-weight:600">${s.student.nom} ${s.student.prenom}</td>
+          <td style="text-align:center">${s.xp||0}</td>
+          <td style="text-align:center">${s.level||1}</td>
+          <td style="text-align:center">${nDone} (${totalStars} &#11088;)</td>
+          <td style="text-align:center;font-size:10px;color:#888">${s.lastActivity||'—'}</td>
+        </tr>`;
+      });
+      html+='</table>';
+    });
+  }
+  html+='</div>';
+
+  // Actions
+  html+='<div style="background:#fff;border-radius:10px;padding:16px;margin-bottom:16px">';
+  html+='<h3 style="font-size:14px;margin-bottom:10px">&#128736; Actions</h3>';
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  html+='<button class="btn btn-primary" onclick="profExportCSV()">&#128196; Exporter CSV</button>';
+  html+='<button class="btn btn-secondary" onclick="profRetryAll()">&#128259; Renvoyer au Sheet</button>';
+  html+='<button class="btn btn-secondary" onclick="window.open(\'https://docs.google.com/spreadsheets/d/16T1T3yL6M49OhJUQS1SmFHwW7Bywp7m2kSXDiXdmItk\')">&#128202; Ouvrir le Sheet</button>';
+  html+='</div></div>';
+
+  // Compétences reference
+  html+='<div style="background:#fff;border-radius:10px;padding:16px">';
+  html+='<h3 style="font-size:14px;margin-bottom:10px">&#128218; Compétences évaluées</h3>';
+  html+='<table style="font-size:12px;border-collapse:collapse;width:100%">';
+  Object.entries(COMPETENCES).forEach(([k,v])=>{
+    html+=`<tr style="border-bottom:1px solid #eee"><td style="padding:4px 8px;font-weight:700;color:#1b3a63">${k}</td><td style="padding:4px 8px">${v}</td></tr>`;
+  });
+  html+='</table></div>';
+
+  el.innerHTML=html;
+}
+function profExportCSV(){
+  if(typeof inerwebExportCSV==='function')inerwebExportCSV('inerweb-schema-resultats');
+  else toast('Snippet inerweb-results.js non chargé');
+}
+function profRetryAll(){
+  if(typeof inerwebRetryAll==='function')inerwebRetryAll().then(r=>toast('Envoyé : '+r.sent+'/'+r.total));
+  else toast('Snippet inerweb-results.js non chargé');
+}
+
+// ===== PLAYER =====
+function playerKey(){return 'iwS_'+student.nom+'_'+student.prenom+'_'+student.classe}
+function xpForLvl(l){return l*150}
+function calcLvl(xp){let l=1;while(xp>=xpForLvl(l)){xp-=xpForLvl(l);l++;}return{level:l,cur:xp,need:xpForLvl(l)}}
+function addXP(n){player.xp+=n;const i=calcLvl(player.xp);player.level=i.level;$('player-lvl').textContent='Niv. '+i.level;$('xp-txt').textContent=player.xp+' XP';$('xp-fill').style.width=Math.round(i.cur/i.need*100)+'%';saveP()}
+function saveP(){
+  try{
+    const data={student,xp:player.xp,level:player.level,completed:player.completed,lastActivity:new Date().toISOString().slice(0,16).replace('T',' ')};
+    localStorage.setItem(playerKey(),JSON.stringify(data));
+  }catch(e){}
+}
+function loadPlayer(){
+  player={xp:0,level:1,completed:{}};
+  try{
+    const s=localStorage.getItem(playerKey());
+    if(s){const d=JSON.parse(s);player.xp=d.xp||0;player.level=d.level||1;player.completed=d.completed||{}}
+  }catch(e){}
+  addXP(0);
+}
+function isUnlocked(id){for(const w of WORLDS){if(w.levels[0]?.id===id)return true;for(let i=1;i<w.levels.length;i++){if(w.levels[i].id===id)return!!player.completed[w.levels[i-1].id]}}return true}
+function getStars(id){return player.completed[id]?.stars||0}
+
+// ===== MAP =====
+function showMap(){
+  $('map-screen').classList.add('on');
+  $('activity').classList.remove('on');
+  $('ed-tools').style.display='none';
+  $('color-bar').classList.remove('on');
+  const el=$('map-screen');el.innerHTML='';
+  const hdr=document.createElement('div');hdr.className='map-header';
+  hdr.innerHTML=`<h2>&#127891; Parcours Électrotechnique</h2><p>Progresse à ton rythme — chaque mission débloque la suivante</p>
+    <button class="btn btn-secondary" onclick="openFree()">&#128295; Mode libre (bac à sable)</button>`;
+  el.appendChild(hdr);
+
+  WORLDS.forEach(w=>{
+    const sec=document.createElement('div');sec.className='map-section';
+    const tot=w.levels.reduce((s,l)=>s+getStars(l.id),0);
+    sec.innerHTML=`<h2><span>${w.icon}</span> ${w.titre} <span style="font-size:11px;color:#aaa;font-weight:400">${tot}/${w.levels.length*3} &#11088;</span></h2><div class="desc">${w.desc}</div>`;
+    const g=document.createElement('div');g.className='level-grid';
+    w.levels.forEach(lv=>{
+      const ok=isUnlocked(lv.id),stars=getStars(lv.id),done=stars>0;
+      const c=document.createElement('div');c.className='level-card'+(done?' done':'')+(!ok?' locked':'');
+      const modes=lv.modes||['observer','colorier','cabler'];
+      c.innerHTML=`<span class="diff-tag diff-${lv.diff}">${lv.diff[0].toUpperCase()+lv.diff.slice(1)}</span>
+        <h4>${lv.titre}</h4><p>${lv.desc.slice(0,70)}...</p>
+        <div class="mode-tabs">${modes.map(m=>`<span class="mode-tab">${modeLabel(m)}</span>`).join('')}</div>
+        <div class="stars">${[1,2,3].map(i=>`<span class="${i<=stars?'star-on':'star-off'}">&#11088;</span>`).join('')}</div>
+        ${!ok?'<span class="lock">&#128274;</span>':''}${done?'<span class="check-done">&#10004;</span>':''}`;
+      if(ok)c.onclick=()=>openLevel(lv,'observer');
+      g.appendChild(c);
+    });
+    sec.appendChild(g);el.appendChild(sec);
+  });
+}
+function modeLabel(m){return{observer:'&#128065; Observer',colorier:'&#127912; Colorier',identifier:'&#10067; Quiz',cabler:'&#128295; Câbler'}[m]||m}
+
+// ===== OPEN LEVEL =====
+function openLevel(level,mode){
+  curLevel=level;curMode=mode;
+  $('map-screen').classList.remove('on');
+  $('activity').classList.add('on');
+  $('ed-tools').style.display='flex';
+
+  placed=[];wires=[];uidC=1;selection.clear();history=[];historyIdx=-1;
+  activeColorId=null;
+
+  if(mode==='observer'||mode==='colorier'){
+    // Load pre-built schema
+    $('sidebar').classList.add('hidden');
+    loadPrebuiltSchema(level.schema);
+    if(mode==='colorier'){
+      // Remove colors from wires
+      wires.forEach(w=>w.color=DEFAULT_WIRE);
+      setTool('color');
+      $('color-bar').classList.add('on');
+    }else{
+      setTool('select');
+      $('color-bar').classList.remove('on');
+    }
+  }else if(mode==='cabler'){
+    $('sidebar').classList.remove('hidden');
+    $('color-bar').classList.remove('on');
+    setTool('select');
+  }
+
+  pushHistory();renderAll();renderPanel();centerView();
+}
+
+function loadPrebuiltSchema(schema){
+  if(!schema)return;
+  schema.syms.forEach(s=>{
+    const uid=uidC++;
+    placed.push({uid,symId:s.s,x:s.x,y:s.y,rot:s.r||0,mirror:s.m||false,label:s.label});
+  });
+  schema.wires.forEach(w=>{
+    const uid=uidC++;
+    const color=curMode==='colorier'?DEFAULT_WIRE:(WIRE_COLORS.find(c=>c.id===w.expected)?.color||DEFAULT_WIRE);
+    wires.push({uid,points:w.pts,color,expected:w.expected,label:w.label||''});
+  });
+}
+
+function openFree(){
+  curLevel=null;curMode='free';
+  $('map-screen').classList.remove('on');
+  $('activity').classList.add('on');
+  $('ed-tools').style.display='flex';
+  $('sidebar').classList.remove('hidden');
+  $('color-bar').classList.remove('on');
+  placed=[];wires=[];uidC=1;selection.clear();history=[];historyIdx=-1;
+  setTool('select');pushHistory();renderAll();
+  $('panel').querySelector('.panel-body').innerHTML='<div class="desc">Mode libre — construis le schéma de ton choix.<br><br>Glisse des symboles depuis le panneau de gauche, trace des fils entre les bornes, et sauvegarde ton travail.</div>';
+  $('panel-title').textContent='Mode libre';
+  $('panel-actions').innerHTML='';
+  $('result').style.display='none';
+  centerView();
+}
+
+// ===== PANEL =====
+function renderPanel(){
+  if(!curLevel)return;
+  $('panel-title').textContent=curLevel.titre;
+  const body=$('panel-body');
+  body.innerHTML='';
+
+  // Mode badge
+  const badge=document.createElement('div');
+  badge.innerHTML=`<span class="mode-badge mode-${curMode}">${modeLabel(curMode)}</span>`;
+  body.appendChild(badge);
+
+  // Description
+  const desc=document.createElement('div');desc.className='desc';desc.textContent=curLevel.desc;
+  body.appendChild(desc);
+
+  // Mode switcher
+  const modes=curLevel.modes||['observer','colorier','cabler'];
+  const tabs=document.createElement('div');tabs.className='mode-tabs';tabs.style.marginBottom='12px';
+  modes.forEach(m=>{
+    const t=document.createElement('span');
+    t.className='mode-tab'+(m===curMode?' active':'');
+    t.innerHTML=modeLabel(m);
+    t.onclick=()=>openLevel(curLevel,m);
+    tabs.appendChild(t);
+  });
+  body.appendChild(tabs);
+
+  if(curMode==='observer'){
+    // Show info about each wire when hovered
+    const info=document.createElement('div');info.className='desc';
+    info.innerHTML='<strong>Explore le schéma :</strong><br>Survole les fils pour voir leur fonction et leur couleur.<br>Clique sur un composant pour en savoir plus.';
+    body.appendChild(info);
+    // Legend
+    if(curLevel.schema?.wires){
+      const leg=document.createElement('div');leg.style.marginTop='10px';
+      const colors=new Set();
+      curLevel.schema.wires.forEach(w=>{const c=WIRE_COLORS.find(x=>x.id===w.expected);if(c)colors.add(c)});
+      leg.innerHTML='<strong style="font-size:11px">Légende :</strong>';
+      colors.forEach(c=>{
+        leg.innerHTML+=`<div style="display:flex;align-items:center;gap:6px;margin:3px 0;font-size:11px">
+          <span style="width:20px;height:4px;background:${c.color};border-radius:2px;display:inline-block"></span> ${c.label}</div>`;
+      });
+      body.appendChild(leg);
+    }
+  }
+
+  if(curMode==='colorier'){
+    const info=document.createElement('div');info.className='desc';
+    info.innerHTML='<strong>Colorie les conducteurs :</strong><br>1. Choisis une couleur dans la barre en bas<br>2. Clique sur un fil pour le colorier<br>3. Vérifie quand tu as tout colorié !';
+    body.appendChild(info);
+  }
+
+  if(curMode==='cabler'){
+    // Steps
+    curSteps=(curLevel.steps_cabler||[]).map(s=>({...s,done:false}));
+    curSteps.forEach((step,i)=>{
+      const d=document.createElement('div');d.className='step';
+      d.innerHTML=`<div class="step-num${step.done?' done':''}">${step.done?'&#10004;':i+1}</div>
+        <div class="step-text${step.done?' done':''}">${step.text}</div>`;
+      body.appendChild(d);
+    });
+  }
+
+  // Actions
+  const act=$('panel-actions');act.innerHTML='';
+  if(curMode==='colorier'||curMode==='cabler'){
+    const btn=document.createElement('button');btn.className='btn btn-primary';
+    btn.innerHTML='&#9989; Vérifier';btn.onclick=curMode==='colorier'?checkColors:checkCabler;
+    act.appendChild(btn);
+  }
+  if(curLevel.hint){
+    const btn=document.createElement('button');btn.className='btn btn-secondary';
+    btn.innerHTML='&#128161; Indice';btn.onclick=()=>toast(curLevel.hint);
+    act.appendChild(btn);
+  }
+  $('result').style.display='none';
+}
+
+// ===== CHECK COLORING =====
+function checkColors(){
+  let correct=0,total=0;
+  wires.forEach(w=>{
+    if(!w.expected)return;
+    total++;
+    const expectedColor=WIRE_COLORS.find(c=>c.id===w.expected)?.color;
+    if(w.color===expectedColor)correct++;
+  });
+  const el=$('result');
+  if(correct===total){
+    el.className='ok';el.style.display='block';
+    el.innerHTML=`&#9989; Parfait ! ${correct}/${total} fils correctement coloriés !`;
+    completeLevel(3);
+  }else{
+    el.className='ko';el.style.display='block';
+    el.innerHTML=`&#10060; ${correct}/${total} fils corrects. Continue !<br><small>Survole les fils en mode Observer pour voir les bonnes couleurs.</small>`;
+  }
+}
+
+// ===== CHECK CABLER =====
+function checkCabler(){
+  let done=0;
+  curSteps.forEach(s=>{try{s.done=s.check()}catch(e){s.done=false}if(s.done)done++});
+  renderPanel();
+  const el=$('result');
+  if(done===curSteps.length){
+    el.className='ok';el.style.display='block';el.innerHTML='&#9989; Schéma complet !';
+    completeLevel(wires.length>=curSteps.length?3:2);
+  }else{
+    el.className='ko';el.style.display='block';
+    el.innerHTML=`&#10060; ${done}/${curSteps.length} étapes validées`;
+  }
+}
+
+// ===== COMPLETE LEVEL =====
+function completeLevel(stars){
+  if(!curLevel)return;
+  const prev=player.completed[curLevel.id];
+  const isNew=!prev;
+  const xpGain=isNew?curLevel.xp:(stars>(prev?.stars||0)?20:0);
+  player.completed[curLevel.id]={stars:Math.max(stars,prev?.stars||0)};
+  if(xpGain>0)addXP(xpGain);
+  saveP();
+  showVictory(curLevel.titre,stars,xpGain);
+
+  // ===== ENVOI AU COLLECTEUR UNIVERSEL =====
+  if(typeof inerwebSend==='function'&&student.nom){
+    const note20=Math.round(stars/3*20*2)/2; // 3 étoiles = 20/20
+    const comps={};
+    if(curMode==='colorier'){comps.C2='M';comps.C4=stars>=2?'M':stars>=1?'A':'ECA'}
+    else if(curMode==='cabler'){comps.C1=stars>=1?'M':'A';comps.C3=stars>=2?'M':stars>=1?'A':'ECA'}
+    else{comps.C2=stars>=2?'M':'A'}
+    inerwebSend({
+      module:'inerWeb Schéma — '+curLevel.titre+' ('+curMode+')',
+      nom:student.nom, prenom:student.prenom, classe:student.classe,
+      note20, score:Math.round(stars/3*100),
+      detail:stars+'/3 étoiles',
+      competences:comps
+    });
+  }
+}
+function showVictory(t,stars,xp){
+  $('v-title').textContent=t+' terminé !';
+  $('v-stars').innerHTML=[1,2,3].map(i=>i<=stars?'&#11088;':'&#9734;').join('');
+  $('v-xp').textContent='+'+xp+' XP';
+  $('v-msg').textContent=stars===3?'Parfait !':stars===2?'Bien joué !':'Continue à progresser !';
+  $('v-trophy').textContent=stars===3?'&#127942;':stars===2?'&#127941;':'&#127775;';
+  $('victory').classList.add('on');
+}
+function closeVictory(){$('victory').classList.remove('on')}
+function nextLevel(){
+  if(!curLevel)return;
+  // Find next level
+  for(const w of WORLDS){
+    for(let i=0;i<w.levels.length;i++){
+      if(w.levels[i].id===curLevel.id&&i+1<w.levels.length){
+        openLevel(w.levels[i+1],'observer');return;
+      }
+    }
+  }
+  showMap();
+}
+
+// ===== COLOR BAR =====
+function buildColorBar(){
+  const bar=$('color-bar');
+  WIRE_COLORS.forEach(c=>{
+    const sw=document.createElement('div');sw.className='color-swatch';
+    sw.style.background=c.color;sw.title=c.label;
+    sw.innerHTML=`<span class="tip">${c.short}</span>`;
+    sw.onclick=()=>{activeColorId=c.id;document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));sw.classList.add('active')};
+    bar.appendChild(sw);
+  });
+  // Eraser
+  const er=document.createElement('div');er.className='color-swatch eraser';er.title='Effacer couleur';
+  er.onclick=()=>{activeColorId='_erase';document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));er.classList.add('active')};
+  bar.appendChild(er);
+}
+
+// ===== PALETTE =====
+function buildPalette(){
+  const list=$('pal-list');list.innerHTML='';
+  const byFam={};allSym.forEach(s=>{if(!byFam[s.famille])byFam[s.famille]=[];byFam[s.famille].push(s)});
+  SCHEMA_FAMS.forEach(fam=>{
+    if(!byFam[fam])return;const items=byFam[fam];
+    const hdr=document.createElement('div');hdr.className='fam-header';hdr.dataset.fam=fam;
+    hdr.innerHTML=`<span class="arrow">&#9654;</span> ${FAM_FR[fam]||fam} <span class="cnt">${items.length}</span>`;
+    hdr.onclick=()=>hdr.classList.toggle('open');
+    const g=document.createElement('div');g.className='fam-items';
+    items.forEach(s=>{
+      const d=document.createElement('div');d.className='pal-item';d.dataset.id=s.id;d.dataset.fam=s.famille;d.dataset.nom=s.nom.toLowerCase();
+      d.innerHTML=s.svg_sans+`<div class="lbl" title="${s.nom}">${s.nom}</div>`;
+      d.draggable=true;
+      d.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',s.id);e.dataTransfer.effectAllowed='copy'});
+      d.addEventListener('dblclick',()=>{const cx=(-viewX+wrap.clientWidth/2)/zoom,cy=(-viewY+wrap.clientHeight/2)/zoom;placeSym(s.id,snap(cx),snap(cy))});
+      g.appendChild(d);
+    });
+    list.appendChild(hdr);list.appendChild(g);
+  });
+}
+function filterPalette(){
+  const q=$('pal-search').value.toLowerCase().trim();
+  document.querySelectorAll('.pal-item').forEach(el=>el.style.display=(!q||el.dataset.nom.includes(q)||el.dataset.fam.includes(q))?'':'none');
+  if(q)document.querySelectorAll('.fam-header').forEach(h=>{const it=h.nextElementSibling;if(it?.querySelector('.pal-item:not([style*="display: none"])'))h.classList.add('open');else h.classList.remove('open')});
+}
+
+// ===== CANVAS =====
+function initCanvas(){
+  svg.setAttribute('width',CW);svg.setAttribute('height',CH);
+  ['grid-layer','wire-layer','symbol-layer','overlay-layer'].forEach(id=>{const g=mkSVG('g',{id});svg.appendChild(g)});
+  drawGrid();setupEvents();centerView();
+}
+function centerView(){viewX=-(CW/2-wrap.clientWidth/2);viewY=-(CH/2-wrap.clientHeight/2);zoom=1;updateView()}
+function updateView(){svg.style.transform=`translate(${viewX}px,${viewY}px) scale(${zoom})`;svg.style.transformOrigin='0 0'}
+function drawGrid(){
+  const g=document.getElementById('grid-layer');if(!g)return;g.innerHTML='';
+  g.appendChild(mkSVG('rect',{x:0,y:0,width:CW,height:CH,fill:'#fff'}));
+  for(let x=0;x<=CW;x+=GRID)g.appendChild(mkSVG('line',{x1:x,y1:0,x2:x,y2:CH,class:x%(GRID*5)===0?'grid-major':'grid-line'}));
+  for(let y=0;y<=CH;y+=GRID)g.appendChild(mkSVG('line',{x1:0,y1:y,x2:CW,y2:y,class:y%(GRID*5)===0?'grid-major':'grid-line'}));
+}
+function setupEvents(){
+  wrap.addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='copy'});
+  wrap.addEventListener('drop',e=>{e.preventDefault();const id=e.dataTransfer.getData('text/plain');if(!id)return;const pt=c2c(e.clientX,e.clientY);placeSym(id,snap(pt.x),snap(pt.y))});
+  wrap.addEventListener('mousedown',onMD);wrap.addEventListener('mousemove',onMM);wrap.addEventListener('mouseup',onMU);
+  wrap.addEventListener('wheel',e=>{e.preventDefault();const r=wrap.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;const oz=zoom;zoom=Math.max(ZMIN,Math.min(ZMAX,zoom*(e.deltaY>0?.9:1.1)));viewX=mx-(mx-viewX)*(zoom/oz);viewY=my-(my-viewY)*(zoom/oz);updateView()},{passive:false});
+}
+function c2c(cx,cy){const r=wrap.getBoundingClientRect();return{x:(cx-r.left-viewX)/zoom,y:(cy-r.top-viewY)/zoom}}
+function snap(v){return Math.round(v/GRID)*GRID}
+
+// ===== MOUSE =====
+function onMD(e){
+  const pt=c2c(e.clientX,e.clientY);
+  if(e.button===1||(e.button===0&&e.shiftKey)){panState={sx:e.clientX,sy:e.clientY,vx:viewX,vy:viewY};wrap.style.cursor='grabbing';e.preventDefault();return}
+  if(e.button!==0)return;
+
+  if(tool==='color'){handleColorClick(pt);return}
+  if(tool==='wire'){handleWireClick(pt);return}
+  if(tool==='erase'){handleEraseClick(pt);return}
+
+  const hit=hitTest(pt);
+  if(hit){
+    if(hit.pin!==undefined){wireStart={uid:hit.uid,pinIdx:hit.pin};setTool('wire');return}
+    if(!selection.has(hit.uid)){if(!e.ctrlKey)clearSel();selectItem(hit.uid)}
+    dragState={sx:pt.x,sy:pt.y,items:[...selection].map(uid=>{const p=placed.find(s=>s.uid===uid);return p?{uid,ox:p.x,oy:p.y}:null}).filter(Boolean)};
+  }else{if(!e.ctrlKey)clearSel()}
+}
+function onMM(e){
+  const pt=c2c(e.clientX,e.clientY);$('st-pos').textContent=`${Math.round(pt.x)},${Math.round(pt.y)}`;
+
+  // Show info tooltip in observer mode
+  if(curMode==='observer'){
+    const hit=hitTest(pt);
+    if(hit&&hit.type==='wire'){
+      const w=wires.find(wr=>wr.uid===hit.uid);
+      if(w&&w.label){showInfoTip(e.clientX,e.clientY,w.label,w.expected)}
+    }else if(hit&&hit.type==='sym'){
+      const p=placed.find(s=>s.uid===hit.uid);
+      if(p){const sym=allSym.find(s=>s.id===p.symId);showInfoTip(e.clientX,e.clientY,p.label||sym?.nom||p.symId,sym?.famille)}
+    }else{hideInfoTip()}
+  }
+
+  if(panState){viewX=panState.vx+(e.clientX-panState.sx);viewY=panState.vy+(e.clientY-panState.sy);updateView();return}
+  if(dragState){
+    const dx=snap(pt.x-dragState.sx),dy=snap(pt.y-dragState.sy);
+    dragState.items.forEach(it=>{const p=placed.find(s=>s.uid===it.uid);if(p){p.x=it.ox+dx;p.y=it.oy+dy}});
+    renderAll();return;
+  }
+  if(tool==='wire'&&wireStart){const from=getWSP();if(from){wirePreview=buildWP(from.x,from.y,snap(pt.x),snap(pt.y));renderOverlay()}}
+}
+function onMU(){
+  if(panState){panState=null;wrap.style.cursor=tool==='wire'||tool==='color'?'crosshair':tool==='erase'?'not-allowed':'default';return}
+  if(dragState){const moved=dragState.items.some(it=>{const p=placed.find(s=>s.uid===it.uid);return p&&(p.x!==it.ox||p.y!==it.oy)});if(moved)pushHistory();dragState=null}
+}
+
+// ===== INFO TOOLTIP =====
+function showInfoTip(x,y,text,sub){
+  const tip=$('info-tip');
+  $('tip-nom').textContent=text;
+  $('tip-fam').textContent=sub?FAM_FR[sub]||sub:'';
+  const c=WIRE_COLORS.find(w=>w.id===sub);
+  if(c)$('tip-fam').innerHTML=`<span style="display:inline-block;width:12px;height:3px;background:${c.color};border-radius:2px;margin-right:4px"></span>${c.label}`;
+  tip.style.left=(x+16)+'px';tip.style.top=(y-10)+'px';
+  tip.classList.add('on');
+}
+function hideInfoTip(){$('info-tip').classList.remove('on')}
+
+// ===== COLOR TOOL =====
+function handleColorClick(pt){
+  const hit=hitTest(pt);
+  if(!hit||hit.type!=='wire')return;
+  const w=wires.find(wr=>wr.uid===hit.uid);
+  if(!w)return;
+  if(activeColorId==='_erase'){w.color=DEFAULT_WIRE}
+  else if(activeColorId){const c=WIRE_COLORS.find(x=>x.id===activeColorId);if(c)w.color=c.color}
+  renderAll();
+}
+
+// ===== HIT TEST =====
+function hitTest(pt){
+  for(const p of placed){const sym=allSym.find(s=>s.id===p.symId);if(!sym)continue;const pins=getPins(p,sym);for(let i=0;i<pins.length;i++){if(Math.hypot(pt.x-pins[i].x,pt.y-pins[i].y)<8)return{uid:p.uid,type:'sym',pin:i}}}
+  for(let i=placed.length-1;i>=0;i--){const p=placed[i];const sym=allSym.find(s=>s.id===p.symId);if(!sym)continue;const vb=parseVB(sym.svg_sans);if(!vb)continue;if(Math.abs(pt.x-p.x)<(vb.w/2+12)&&Math.abs(pt.y-p.y)<(vb.h/2+12))return{uid:p.uid,type:'sym'}}
+  for(const w of wires){for(let i=0;i<w.points.length-1;i++){if(dSeg(pt,w.points[i],w.points[i+1])<8)return{uid:w.uid,type:'wire'}}}
+  return null;
+}
+function dSeg(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,l2=dx*dx+dy*dy;if(l2===0)return Math.hypot(p.x-a.x,p.y-a.y);const t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/l2));return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy))}
+
+// ===== SYMBOL OPS =====
+function placeSym(id,x,y){const uid=uidC++;placed.push({uid,symId:id,x,y,rot:0,mirror:false});pushHistory();renderAll();toast((allSym.find(s=>s.id===id)?.nom||id)+' placé')}
+function getPins(p,sym){return sym.pins.map(pin=>{let px=pin.x,py=pin.y;if(p.mirror)px=-px;for(let r=0;r<(p.rot||0);r++){const t=px;px=-py;py=t}return{x:p.x+px,y:p.y+py}})}
+function parseVB(s){const m=s.match(/viewBox="([^"]+)"/);if(!m)return null;const[x,y,w,h]=m[1].split(/\s+/).map(Number);return{x,y,w,h}}
+function isPinConn(p,sym,idx){const pins=getPins(p,sym);const pin=pins[idx];return wires.some(w=>w.points.some(pt=>Math.abs(pt.x-pin.x)<3&&Math.abs(pt.y-pin.y)<3))}
+
+// ===== WIRE =====
+function handleWireClick(pt){
+  const sx=snap(pt.x),sy=snap(pt.y);
+  if(!wireStart){const hit=hitTest(pt);wireStart=(hit&&hit.pin!==undefined)?{uid:hit.uid,pinIdx:hit.pin}:{x:sx,y:sy};return}
+  const from=getWSP();if(!from){wireStart=null;return}
+  const hit=hitTest(pt);let tx=sx,ty=sy;
+  if(hit&&hit.pin!==undefined){const p=placed.find(s=>s.uid===hit.uid);const sym=allSym.find(s=>s.id===p.symId);const pins=getPins(p,sym);tx=pins[hit.pin].x;ty=pins[hit.pin].y}
+  const pts=buildWPts(from.x,from.y,tx,ty);
+  if(pts.length>=2){wires.push({uid:uidC++,points:pts,color:DEFAULT_WIRE});pushHistory();renderAll()}
+  wireStart=null;wirePreview=null;renderOverlay();
+}
+function getWSP(){if(!wireStart)return null;if(wireStart.x!==undefined)return wireStart;const p=placed.find(s=>s.uid===wireStart.uid);if(!p)return null;const sym=allSym.find(s=>s.id===p.symId);if(!sym)return null;return getPins(p,sym)[wireStart.pinIdx]||null}
+function buildWPts(x1,y1,x2,y2){if(x1===x2||y1===y2)return[{x:x1,y:y1},{x:x2,y:y2}];return[{x:x1,y:y1},{x:x1,y:y2},{x:x2,y:y2}]}
+function buildWP(x1,y1,x2,y2){return buildWPts(x1,y1,x2,y2).map((p,i)=>(i?'L':'M')+p.x+','+p.y).join(' ')}
+
+function handleEraseClick(pt){const hit=hitTest(pt);if(!hit)return;if(hit.type==='sym')placed=placed.filter(p=>p.uid!==hit.uid);else wires=wires.filter(w=>w.uid!==hit.uid);selection.delete(hit.uid);pushHistory();renderAll();toast('Supprimé')}
+
+// ===== SELECTION =====
+function selectItem(uid){selection.add(uid);renderAll()}
+function clearSel(){selection.clear();renderAll()}
+function delSel(){hideCtx();if(!selection.size)return;selection.forEach(uid=>{placed=placed.filter(p=>p.uid!==uid);wires=wires.filter(w=>w.uid!==uid)});selection.clear();pushHistory();renderAll()}
+function rotSel(){hideCtx();selection.forEach(uid=>{const p=placed.find(s=>s.uid===uid);if(p)p.rot=((p.rot||0)+1)%4});pushHistory();renderAll()}
+function mirSel(){hideCtx();selection.forEach(uid=>{const p=placed.find(s=>s.uid===uid);if(p)p.mirror=!p.mirror});pushHistory();renderAll()}
+function dupSel(){hideCtx();const ns=new Set();selection.forEach(uid=>{const p=placed.find(s=>s.uid===uid);if(p){const n=uidC++;placed.push({...p,uid:n,x:p.x+GRID*2,y:p.y+GRID*2});ns.add(n)}});selection=ns;pushHistory();renderAll()}
+
+// ===== RENDER =====
+function renderAll(){renderSymbols();renderWires();renderOverlay()}
+function renderSymbols(){
+  const g=document.getElementById('symbol-layer');if(!g)return;g.innerHTML='';
+  placed.forEach(p=>{
+    const sym=allSym.find(s=>s.id===p.symId);if(!sym)return;
+    const group=mkSVG('g',{class:'sym-group'+(selection.has(p.uid)?' selected':''),'data-uid':p.uid,
+      transform:`translate(${p.x},${p.y}) rotate(${(p.rot||0)*90}) ${p.mirror?'scale(-1,1)':''}`});
+    const vb=parseVB(sym.svg_sans);
+    if(vb)group.appendChild(mkSVG('rect',{class:'sym-bg',x:vb.x-4,y:vb.y-4,width:vb.w+8,height:vb.h+8,fill:'rgba(255,255,255,.7)',stroke:'transparent','stroke-width':1.5,rx:4}));
+    const c=mkSVG('g');c.innerHTML=sym.svg_sans.replace(/<\/?svg[^>]*>/g,'');group.appendChild(c);
+    if(curMode==='cabler'||curMode==='free'){
+      sym.pins.forEach((pin,idx)=>{
+        const conn=isPinConn(p,sym,idx);
+        const dot=mkSVG('circle',{class:'pin-dot'+(conn?' connected':''),cx:pin.x,cy:pin.y,r:PIN_R});
+        dot.addEventListener('mousedown',e=>{e.stopPropagation();wireStart={uid:p.uid,pinIdx:idx};setTool('wire')});
+        group.appendChild(dot);
+      });
+    }
+    // Label
+    if(vb){
+      const lbl=mkSVG('text',{class:'sym-label',x:0,y:vb.y+vb.h+13,'font-size':'9'});
+      lbl.textContent=p.label||sym.nom;group.appendChild(lbl);
+    }
+    g.appendChild(group);
+  });
+}
+function renderWires(){
+  const g=document.getElementById('wire-layer');if(!g)return;g.innerHTML='';
+  wires.forEach(w=>{
+    const d=w.points.map((p,i)=>(i?'L':'M')+p.x+','+p.y).join(' ');
+    const color=w.color||DEFAULT_WIRE;
+    const path=mkSVG('path',{class:'wire'+(selection.has(w.uid)?' selected':''),d,stroke:color,'data-uid':w.uid});
+    path.addEventListener('mousedown',e=>{
+      if(tool==='color'){e.stopPropagation();handleColorClick(c2c(e.clientX,e.clientY));return}
+      if(tool==='erase'){e.stopPropagation();wires=wires.filter(wr=>wr.uid!==w.uid);pushHistory();renderAll();return}
+      if(tool==='select'){e.stopPropagation();if(!e.ctrlKey)clearSel();selectItem(w.uid)}
+    });
+    path.addEventListener('mouseenter',()=>{
+      if(curMode==='observer'&&w.label){$('st-info').textContent=w.label}
+    });
+    g.appendChild(path);
+  });
+}
+function renderOverlay(){const g=document.getElementById('overlay-layer');if(!g)return;g.innerHTML='';if(wirePreview)g.appendChild(mkSVG('path',{class:'wire-preview',d:wirePreview}))}
+
+// ===== TOOL =====
+function setTool(t){
+  tool=t;wireStart=null;wirePreview=null;renderOverlay();
+  document.querySelectorAll('#ed-tools button[id^="btn-"]').forEach(b=>b.classList.remove('active'));
+  const b=$('btn-'+t);if(b)b.classList.add('active');
+  wrap.style.cursor=t==='wire'||t==='color'?'crosshair':t==='erase'?'not-allowed':'default';
+  const nm={select:'Sélection',wire:'Fil',erase:'Gomme',color:'Colorier'};
+  $('st-tool').textContent=nm[t]||t;
+}
+
+// ===== HISTORY =====
+function pushHistory(){const s=JSON.stringify({placed,wires,uidC});history=history.slice(0,historyIdx+1);history.push(s);historyIdx=history.length-1;if(history.length>60){history.shift();historyIdx--}}
+function undo(){if(historyIdx<=0)return;historyIdx--;restH()}
+function redo(){if(historyIdx>=history.length-1)return;historyIdx++;restH()}
+function restH(){const s=JSON.parse(history[historyIdx]);placed=s.placed;wires=s.wires;uidC=s.uidC;selection.clear();renderAll()}
+
+// ===== KEYBOARD =====
+function onKey(e){
+  if(e.target.tagName==='INPUT')return;
+  if(e.key==='Delete'||e.key==='Backspace'){delSel();e.preventDefault()}
+  if(e.key==='r'||e.key==='R')rotSel();
+  if(e.key==='m'||e.key==='M')mirSel();
+  if(e.key==='d'||e.key==='D')dupSel();
+  if(e.key==='v'||e.key==='V')setTool('select');
+  if(e.key==='w'||e.key==='W')setTool('wire');
+  if(e.key==='e'||e.key==='E')setTool('erase');
+  if(e.key==='c'||e.key==='C')setTool('color');
+  if(e.key==='Escape'){wireStart=null;wirePreview=null;clearSel();setTool('select');renderOverlay()}
+  if(e.ctrlKey&&e.key==='z'){undo();e.preventDefault()}
+  if(e.ctrlKey&&(e.key==='y'||(e.shiftKey&&e.key==='Z'))){redo();e.preventDefault()}
+  if(e.ctrlKey&&e.key==='a'){e.preventDefault();placed.forEach(p=>selection.add(p.uid));wires.forEach(w=>selection.add(w.uid));renderAll()}
+  if(e.ctrlKey&&e.key==='s'){e.preventDefault();saveSchema()}
+}
+
+// ===== CONTEXT MENU =====
+function showCtx(e){const pt=c2c(e.clientX,e.clientY);const hit=hitTest(pt);if(!hit||hit.type==='wire')return;if(!selection.has(hit.uid)){clearSel();selectItem(hit.uid)}const ctx=$('ctx');ctx.style.left=e.clientX+'px';ctx.style.top=e.clientY+'px';ctx.classList.add('on')}
+function hideCtx(){$('ctx').classList.remove('on')}
+
+// ===== SAVE/LOAD =====
+function saveSchema(){
+  const data=JSON.stringify({v:'iwS-v002',placed,wires,uidC},null,2);
+  const b=new Blob([data],{type:'application/json'});const a=document.createElement('a');
+  a.href=URL.createObjectURL(b);a.download='schema_'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(a.href);toast('Sauvegardé')
+}
+function loadSchema(){
+  const inp=document.createElement('input');inp.type='file';inp.accept='.json';
+  inp.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);placed=d.placed||[];wires=d.wires||[];uidC=d.uidC||1;selection.clear();pushHistory();renderAll();toast('Chargé')}catch(err){toast('Erreur: '+err.message)}};r.readAsText(f)};
+  inp.click();
+}
+
+// ===== HELPERS =====
+function mkSVG(tag,attrs={}){const el=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));return el}
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2500)}
+
+window.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>
