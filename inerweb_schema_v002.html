@@ -82,10 +82,16 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',Calibri,sans-serif;
 #activity{display:none;width:100%;height:100%;flex-direction:row}
 #activity.on{display:flex}
 
-/* Sidebar palette */
-#sidebar{width:210px;background:#fff;border-right:2px solid var(--navy);overflow-y:auto;flex-shrink:0}
+/* Sidebar palette — resizable */
+#sidebar{width:210px;min-width:140px;max-width:420px;background:#fff;border-right:2px solid var(--navy);overflow-y:auto;flex-shrink:0;position:relative}
 #sidebar.hidden{display:none}
+#sidebar-resize{position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:5}
+#sidebar-resize:hover,#sidebar-resize.dragging{background:var(--orange);opacity:.3}
 #pal-search{width:100%;padding:6px 10px;border:none;border-bottom:2px solid var(--navy);font-size:12px;outline:none;font-family:inherit}
+.pal-size-btns{display:flex;gap:2px;padding:4px 6px;border-bottom:1px solid #eee;background:#fafaf7}
+.pal-size-btns button{flex:1;padding:3px;border:1px solid #ddd;border-radius:4px;font-size:9px;cursor:pointer;background:#fff;font-family:inherit;color:var(--navy)}
+.pal-size-btns button:hover{background:var(--orange);color:#fff;border-color:var(--orange)}
+.pal-size-btns button.active{background:var(--navy);color:#fff;border-color:var(--navy)}
 .fam-header{padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;background:#fafaf7;user-select:none;border-bottom:1px solid #eee}
 .fam-header:hover{background:#f0efe8}
 .fam-header .arrow{font-size:8px;transition:.2s;display:inline-block}
@@ -115,6 +121,11 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',Calibri,sans-serif;
 .wire.uncolored{stroke:#bbb;stroke-width:4;stroke-dasharray:8 4;animation:wire-pulse 2s infinite}
 @keyframes wire-pulse{0%,100%{opacity:.6}50%{opacity:1}}
 .wire-preview{stroke:var(--orange);stroke-width:2;fill:none;stroke-dasharray:4 3;opacity:.5;pointer-events:none}
+/* Wire edit handles */
+.wire-handle{fill:var(--orange);stroke:#fff;stroke-width:1.5;cursor:move;opacity:0;transition:opacity .15s}
+.wire.selected~.wire-handle,.wire-handle:hover{opacity:1}
+.wire-handles-group .wire-handle{opacity:1}
+.wire-handle:hover{fill:#ff3300;r:6}
 .sym-label{font-size:9px;font-family:'Segoe UI',sans-serif;fill:#888;text-anchor:middle}
 
 /* ===== RIGHT PANEL ===== */
@@ -289,7 +300,13 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',Calibri,sans-serif;
     <div id="activity">
       <div id="sidebar">
         <input type="text" id="pal-search" placeholder="&#128269; Rechercher..." oninput="filterPalette()">
+        <div class="pal-size-btns">
+          <button onclick="setPalSize('s')" title="Petit">S</button>
+          <button onclick="setPalSize('m')" class="active" title="Moyen">M</button>
+          <button onclick="setPalSize('l')" title="Grand">L</button>
+        </div>
         <div id="pal-list"></div>
+        <div id="sidebar-resize"></div>
       </div>
       <div id="canvas-area"><svg id="canvas"></svg></div>
       <div id="panel">
@@ -1503,6 +1520,24 @@ function renderWires(){
     path.addEventListener('mouseenter',()=>{
       if(curMode==='observer'&&w.label){$('st-info').textContent=w.label}
     });
+    // Double-clic = ajouter un point de coude sur le fil
+    path.addEventListener('dblclick',e=>{
+      if(tool!=='select')return;
+      e.stopPropagation();
+      const pt=c2c(e.clientX,e.clientY);
+      const sx=snap(pt.x),sy=snap(pt.y);
+      // Trouver le segment le plus proche et insérer le point
+      let bestIdx=0,bestDist=Infinity;
+      for(let i=0;i<w.points.length-1;i++){
+        const d=dSeg(pt,w.points[i],w.points[i+1]);
+        if(d<bestDist){bestDist=d;bestIdx=i+1}
+      }
+      w.points.splice(bestIdx,0,{x:sx,y:sy});
+      pushHistory();
+      clearSel();selectItem(w.uid);
+      renderAll();
+      toast('Point ajouté — glisse-le pour modifier le tracé');
+    });
     g.appendChild(path);
   });
 }
@@ -1590,6 +1625,110 @@ function loadSchema(){
 // ===== HELPERS =====
 function mkSVG(tag,attrs={}){const el=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));return el}
 function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2500)}
+
+// ===== SIDEBAR RESIZE =====
+(function(){
+  let resizing=false,startX=0,startW=0;
+  document.addEventListener('DOMContentLoaded',()=>{
+    const handle=$('sidebar-resize');
+    if(!handle)return;
+    handle.addEventListener('mousedown',e=>{
+      resizing=true;startX=e.clientX;startW=$('sidebar').offsetWidth;
+      handle.classList.add('dragging');e.preventDefault();
+    });
+    document.addEventListener('mousemove',e=>{
+      if(!resizing)return;
+      const w=Math.max(140,Math.min(420,startW+(e.clientX-startX)));
+      $('sidebar').style.width=w+'px';
+    });
+    document.addEventListener('mouseup',()=>{
+      if(resizing){resizing=false;$('sidebar-resize').classList.remove('dragging')}
+    });
+  });
+})();
+
+function setPalSize(size){
+  const sb=$('sidebar');
+  document.querySelectorAll('.pal-size-btns button').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  if(size==='s'){
+    sb.style.width='140px';
+    document.querySelectorAll('.fam-items').forEach(g=>g.style.gridTemplateColumns='repeat(2,1fr)');
+    document.querySelectorAll('.pal-item svg').forEach(s=>{s.style.width='22px';s.style.height='26px'});
+    document.querySelectorAll('.pal-item .lbl').forEach(l=>l.style.fontSize='6px');
+  }else if(size==='l'){
+    sb.style.width='340px';
+    document.querySelectorAll('.fam-items').forEach(g=>g.style.gridTemplateColumns='repeat(4,1fr)');
+    document.querySelectorAll('.pal-item svg').forEach(s=>{s.style.width='44px';s.style.height='50px'});
+    document.querySelectorAll('.pal-item .lbl').forEach(l=>l.style.fontSize='9px');
+  }else{
+    sb.style.width='210px';
+    document.querySelectorAll('.fam-items').forEach(g=>g.style.gridTemplateColumns='repeat(3,1fr)');
+    document.querySelectorAll('.pal-item svg').forEach(s=>{s.style.width='';s.style.height=''});
+    document.querySelectorAll('.pal-item .lbl').forEach(l=>l.style.fontSize='');
+  }
+}
+
+// ===== WIRE POINT DRAGGING =====
+let wireDrag=null; // {wireUid, pointIdx, ox, oy}
+
+function renderWireHandles(){
+  const g=document.getElementById('overlay-layer');
+  if(!g)return;
+  // Show handles for selected wires
+  selection.forEach(uid=>{
+    const w=wires.find(wr=>wr.uid===uid);
+    if(!w)return;
+    w.points.forEach((pt,i)=>{
+      const h=mkSVG('circle',{class:'wire-handle',cx:pt.x,cy:pt.y,r:5,'data-wire':uid,'data-pt':i});
+      h.addEventListener('mousedown',e=>{
+        e.stopPropagation();
+        wireDrag={wireUid:uid,pointIdx:i,ox:pt.x,oy:pt.y,sx:e.clientX,sy:e.clientY};
+        wrap.style.cursor='move';
+      });
+      g.appendChild(h);
+    });
+  });
+}
+
+// Patch onMM to handle wire point dragging
+const _origMM=onMM;
+onMM=function(e){
+  if(wireDrag){
+    const pt=c2c(e.clientX,e.clientY);
+    const w=wires.find(wr=>wr.uid===wireDrag.wireUid);
+    if(w&&w.points[wireDrag.pointIdx]){
+      w.points[wireDrag.pointIdx].x=snap(pt.x);
+      w.points[wireDrag.pointIdx].y=snap(pt.y);
+      renderAll();
+      renderWireHandles();
+    }
+    return;
+  }
+  _origMM(e);
+};
+
+const _origMU=onMU;
+onMU=function(e){
+  if(wireDrag){
+    const w=wires.find(wr=>wr.uid===wireDrag.wireUid);
+    if(w){
+      const p=w.points[wireDrag.pointIdx];
+      if(p.x!==wireDrag.ox||p.y!==wireDrag.oy)pushHistory();
+    }
+    wireDrag=null;
+    wrap.style.cursor=tool==='pan'?'grab':tool==='wire'||tool==='color'?'crosshair':tool==='erase'?'not-allowed':'default';
+    return;
+  }
+  _origMU(e);
+};
+
+// Patch renderOverlay to include wire handles
+const _origOverlay=renderOverlay;
+renderOverlay=function(){
+  _origOverlay();
+  renderWireHandles();
+};
 
 window.addEventListener('DOMContentLoaded',init);
 </script>
