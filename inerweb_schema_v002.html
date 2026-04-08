@@ -409,35 +409,60 @@ const $=id=>document.getElementById(id);
 let svg,wrap;
 
 // ===== PROGRESSION 2 ANS =====
+/* ═══════════════════════════════════════════════════════════════
+   SCHÉMAS PRÉ-CONSTRUITS — Pin positions réelles
+   ─────────────────────────────────────────────────────────────
+   disjoncteur_1p_n : Ph_in(+10,-30) N_in(-10,-30) Ph_out(+10,+20) N_out(-10,+20)
+   disjoncteur_1p   : in(0,-30) out(0,+20)
+   interrupteur     : top(0,-21) bot(0,+21)
+   contact_no       : top(0,-20) bot(0,+20)
+   contact_nf       : top(0,-20) bot(0,+20)
+   contact_no_13_14 : top(0,-30) bot(0,+30)
+   bp_no_marche     : top(0,-21) bot(0,+21)
+   bp_nf_arret      : top(0,-21) bot(0,+21)
+   bobine_contacteur: top(0,-20) bot(0,+20)
+   telerupteur      : top(0,-20) bot(0,+20)
+   voyant_lumineux  : top(0,-20) bot(0,+20)
+   voyant_vert/rouge: top(0,+20) bot(0,-20) [inversé!]
+   source_phase_l   : (10,0) → rot1=(0,10)
+   source_neutre_n  : (10,0) → rot1=(0,10)
+   source_3p        : L1(10,-20) L2(10,0) L3(10,20) → rot1: L1(20,10) L2(0,10) L3(-20,10)
+   va_et_vient      : nav1(0,10) nav2(20,10) commun(10,-30)
+   thermostat_nf    : top(0,-20) bot(0,+15)
+   pressostat_nf    : capteur(-17,0) top(0,-20) bot(0,+20)
+   sectionneur_3p   : L1(-20,±20) L2(0,±20) L3(20,±20)
+   relais_thermique : 3 paires (0,±21)(10,±21)(20,±21)
+   moteur_triphase  : U1(-20,-30) V1(0,-30) W1(20,-30) PE(21,6)
+   contact_puissance_3p_no : top(0,-20) bot(0,+20) [1 pôle]
+   transfo_monophase: prim1(0,-26) prim2(10,-26) sec1(0,26) sec2(10,26)
+   ═══════════════════════════════════════════════════════════════ */
+
 const WORLDS=[
-{id:'bases',icon:'&#127793;',titre:'Les bases',desc:'Découverte des composants et premiers circuits.',
+{id:'bases',icon:'&#127793;',titre:'Les bases',desc:'Circuits domestiques monophasés. Disjoncteur bipolaire phase+neutre.',
 levels:[
   {id:'L01',titre:'Simple allumage',diff:'decouverte',xp:40,
-   desc:'Un interrupteur commande une lampe. Le circuit le plus simple.',
+   desc:'Un interrupteur commande une lampe. Le disjoncteur bipolaire Q1 coupe phase ET neutre.',
    modes:['observer','colorier','cabler'],
    schema:{
-     // Pin positions calculées depuis les SVG réels :
-     // source_phase_l rot=1: pin at (0,10) relative → pointe vers le bas
-     // source_neutre_n rot=1: pin at (0,10) relative → pointe vers le bas
-     // disjoncteur_1p rot=0: pin top(0,-30), bottom(0,20)
-     // interrupteur rot=0: pin top(0,-21), bottom(0,21)
-     // voyant_lumineux rot=0: pin top(0,-20), bottom(0,20)
+     // Q1 disjoncteur_1p_n à (250,280) : Phase=droite(260), Neutre=gauche(240)
      syms:[
-       {s:'source_phase_l', x:200, y:160, r:1, label:'Phase L'},
-       {s:'source_neutre_n', x:400, y:160, r:1, label:'Neutre N'},
-       {s:'disjoncteur_1p',  x:200, y:280, r:0, label:'Q1'},
-       {s:'interrupteur',    x:200, y:420, r:0, label:'S1'},
-       {s:'voyant_lumineux', x:200, y:560, r:0, label:'H1 Lampe'},
+       {s:'source_phase_l',   x:260, y:140, r:1, label:'Phase L'},
+       {s:'source_neutre_n',  x:240, y:140, r:1, label:'Neutre N'},
+       {s:'disjoncteur_1p_n', x:250, y:280, r:0, label:'Q1 (bipolaire)'},
+       {s:'interrupteur',     x:260, y:420, r:0, label:'S1'},
+       {s:'voyant_lumineux',  x:260, y:560, r:0, label:'H1 Lampe'},
      ],
      wires:[
-       // Phase : source L → Q1 entrée (haut)
-       {pts:[{x:200,y:170},{x:200,y:250}], expected:'phase_l1', label:'Phase L → Q1 (entrée)'},
-       // Q1 sortie → S1 entrée
-       {pts:[{x:200,y:300},{x:200,y:399}], expected:'phase_l1', label:'Q1 (sortie) → S1'},
-       // S1 sortie → H1 entrée
-       {pts:[{x:200,y:441},{x:200,y:540}], expected:'phase_l1', label:'S1 → H1 (phase commutée)'},
-       // H1 sortie → retour neutre N
-       {pts:[{x:200,y:580},{x:200,y:620},{x:400,y:620},{x:400,y:170}], expected:'neutre', label:'Neutre retour (H1 → N)'},
+       // Phase : source L → Q1 entrée Phase (droite, x=260)
+       {pts:[{x:260,y:150},{x:260,y:250}], expected:'phase_l1', label:'Phase L → Q1 (entrée Phase)'},
+       // Neutre : source N → Q1 entrée Neutre (gauche, x=240)
+       {pts:[{x:240,y:150},{x:240,y:250}], expected:'neutre', label:'Neutre N → Q1 (entrée Neutre)'},
+       // Q1 sortie Phase → S1
+       {pts:[{x:260,y:300},{x:260,y:399}], expected:'phase_l1', label:'Q1 (sortie Ph) → S1'},
+       // S1 → H1
+       {pts:[{x:260,y:441},{x:260,y:540}], expected:'phase_l1', label:'S1 → H1 (phase commutée)'},
+       // Q1 sortie Neutre → retour H1 bottom
+       {pts:[{x:240,y:300},{x:240,y:580},{x:260,y:580}], expected:'neutre', label:'Q1 (sortie N) → H1 retour'},
      ]
    },
    steps_cabler:[
@@ -454,27 +479,30 @@ levels:[
    ]
   },
   {id:'L02',titre:'Double allumage',diff:'facile',xp:50,
-   desc:'Deux interrupteurs commandent chacun une lampe indépendante.',
+   desc:'Deux interrupteurs commandent chacun une lampe. Q1 bipolaire coupe phase+neutre.',
    modes:['observer','colorier','cabler'],
    schema:{
+     // Q1 à (300,280) : Phase=310, Neutre=290
      syms:[
-       {s:'source_phase_l',  x:300, y:160, r:1, label:'Phase L'},
-       {s:'source_neutre_n', x:500, y:160, r:1, label:'Neutre N'},
-       {s:'disjoncteur_1p',  x:300, y:280, r:0, label:'Q1'},
-       {s:'interrupteur',    x:220, y:420, r:0, label:'S1'},
-       {s:'interrupteur',    x:380, y:420, r:0, label:'S2'},
-       {s:'voyant_lumineux', x:220, y:560, r:0, label:'H1'},
-       {s:'voyant_vert',     x:380, y:560, r:0, label:'H2'},
+       {s:'source_phase_l',   x:310, y:140, r:1, label:'Phase L'},
+       {s:'source_neutre_n',  x:290, y:140, r:1, label:'Neutre N'},
+       {s:'disjoncteur_1p_n', x:300, y:280, r:0, label:'Q1 (bipolaire)'},
+       {s:'interrupteur',     x:200, y:420, r:0, label:'S1'},
+       {s:'interrupteur',     x:420, y:420, r:0, label:'S2'},
+       {s:'voyant_lumineux',  x:200, y:560, r:0, label:'H1'},
+       {s:'voyant_lumineux',  x:420, y:560, r:0, label:'H2'},
      ],
      wires:[
-       {pts:[{x:300,y:170},{x:300,y:250}],expected:'phase_l1',label:'Phase L → Q1'},
-       {pts:[{x:300,y:300},{x:300,y:360}],expected:'phase_l1',label:'Q1 sortie → noeud'},
-       {pts:[{x:300,y:360},{x:220,y:360},{x:220,y:399}],expected:'phase_l1',label:'Noeud → S1'},
-       {pts:[{x:300,y:360},{x:380,y:360},{x:380,y:399}],expected:'phase_l1',label:'Noeud → S2'},
-       {pts:[{x:220,y:441},{x:220,y:540}],expected:'phase_l1',label:'S1 → H1'},
-       {pts:[{x:380,y:441},{x:380,y:540}],expected:'phase_l1',label:'S2 → H2'},
-       {pts:[{x:220,y:580},{x:220,y:640},{x:380,y:640},{x:380,y:580}],expected:'neutre',label:'Neutre H1↔H2'},
-       {pts:[{x:300,y:640},{x:500,y:640},{x:500,y:170}],expected:'neutre',label:'Neutre retour → N'},
+       {pts:[{x:310,y:150},{x:310,y:250}],expected:'phase_l1',label:'Phase L → Q1 (entrée Ph)'},
+       {pts:[{x:290,y:150},{x:290,y:250}],expected:'neutre',label:'Neutre N → Q1 (entrée N)'},
+       {pts:[{x:310,y:300},{x:310,y:360}],expected:'phase_l1',label:'Q1 sortie Ph → noeud'},
+       {pts:[{x:310,y:360},{x:200,y:360},{x:200,y:399}],expected:'phase_l1',label:'Noeud → S1'},
+       {pts:[{x:310,y:360},{x:420,y:360},{x:420,y:399}],expected:'phase_l1',label:'Noeud → S2'},
+       {pts:[{x:200,y:441},{x:200,y:540}],expected:'phase_l1',label:'S1 → H1'},
+       {pts:[{x:420,y:441},{x:420,y:540}],expected:'phase_l1',label:'S2 → H2'},
+       {pts:[{x:290,y:300},{x:290,y:620}],expected:'neutre',label:'Q1 sortie N → rail neutre'},
+       {pts:[{x:200,y:580},{x:200,y:620},{x:290,y:620}],expected:'neutre',label:'H1 → neutre'},
+       {pts:[{x:420,y:580},{x:420,y:620},{x:290,y:620}],expected:'neutre',label:'H2 → neutre'},
      ]
    },
    steps_cabler:[
@@ -486,32 +514,31 @@ levels:[
    hint:'Les 2 circuits S1-H1 et S2-H2 sont en parallèle après le disjoncteur.',
   },
   {id:'L03',titre:'Va-et-vient',diff:'facile',xp:60,
-   desc:'Commander une lampe depuis 2 endroits avec des inverseurs.',
+   desc:'Commander une lampe depuis 2 endroits. Q1 bipolaire, 2 inverseurs, navettes.',
    modes:['observer','colorier','cabler'],
    schema:{
-     // va_et_vient pins: (0,10)=nav1, (20,10)=nav2, (10,-30)=commun
-     // Placé à (x,y) rot=0 : commun=(x+10,y-30), nav1=(x,y+10), nav2=(x+20,y+10)
+     // Q1 à (250,280) : Phase=260, Neutre=240
+     // va_et_vient: commun=(x+10,y-30), nav1=(x,y+10), nav2=(x+20,y+10)
      syms:[
-       {s:'source_phase_l',  x:200, y:160, r:1, label:'Phase L'},
-       {s:'source_neutre_n', x:500, y:160, r:1, label:'Neutre N'},
-       {s:'disjoncteur_1p',  x:200, y:280, r:0, label:'Q1'},
-       {s:'va_et_vient',     x:200, y:440, r:0, label:'S1'},
-       {s:'va_et_vient',     x:380, y:440, r:0, label:'S2'},
-       {s:'voyant_lumineux', x:390, y:580, r:0, label:'H1'},
+       {s:'source_phase_l',   x:260, y:140, r:1, label:'Phase L'},
+       {s:'source_neutre_n',  x:240, y:140, r:1, label:'Neutre N'},
+       {s:'disjoncteur_1p_n', x:250, y:280, r:0, label:'Q1 (bipolaire)'},
+       {s:'va_et_vient',      x:200, y:440, r:0, label:'S1 (inverseur)'},
+       {s:'va_et_vient',      x:380, y:440, r:0, label:'S2 (inverseur)'},
+       {s:'voyant_lumineux',  x:390, y:600, r:0, label:'H1 Lampe'},
      ],
      wires:[
-       // Phase L → Q1
-       {pts:[{x:200,y:170},{x:200,y:250}],expected:'phase_l1',label:'Phase L → Q1'},
-       // Q1 → commun S1 (pin commun = x+10, y-30 = 210, 410)
-       {pts:[{x:200,y:300},{x:210,y:300},{x:210,y:410}],expected:'phase_l1',label:'Q1 → commun S1'},
-       // Navette 1 : S1 nav1 (200,450) → S2 nav1 (380,450)
-       {pts:[{x:200,y:450},{x:380,y:450}],expected:'navette',label:'Navette 1'},
-       // Navette 2 : S1 nav2 (220,450) → S2 nav2 (400,450)
-       {pts:[{x:220,y:450},{x:220,y:480},{x:400,y:480},{x:400,y:450}],expected:'navette',label:'Navette 2'},
-       // Commun S2 (390, 410) → H1 top (390, 560)
-       {pts:[{x:390,y:410},{x:390,y:560}],expected:'phase_l1',label:'Commun S2 → H1'},
-       // H1 bottom → Neutre retour
-       {pts:[{x:390,y:600},{x:390,y:640},{x:500,y:640},{x:500,y:170}],expected:'neutre',label:'Neutre retour'},
+       {pts:[{x:260,y:150},{x:260,y:250}],expected:'phase_l1',label:'Phase L → Q1 (entrée Ph)'},
+       {pts:[{x:240,y:150},{x:240,y:250}],expected:'neutre',label:'Neutre N → Q1 (entrée N)'},
+       // Q1 sortie Ph (260,300) → commun S1 (210,410)
+       {pts:[{x:260,y:300},{x:260,y:380},{x:210,y:380},{x:210,y:410}],expected:'phase_l1',label:'Q1 Ph → commun S1'},
+       // Navettes S1↔S2
+       {pts:[{x:200,y:450},{x:380,y:450}],expected:'navette',label:'Navette 1 (S1↔S2)'},
+       {pts:[{x:220,y:450},{x:220,y:480},{x:400,y:480},{x:400,y:450}],expected:'navette',label:'Navette 2 (S1↔S2)'},
+       // Commun S2 (390,410) → H1 top (390,580)
+       {pts:[{x:390,y:410},{x:390,y:580}],expected:'phase_l1',label:'Commun S2 → H1'},
+       // Q1 sortie N (240,300) → H1 bottom (390,620)
+       {pts:[{x:240,y:300},{x:240,y:660},{x:390,y:660},{x:390,y:620}],expected:'neutre',label:'Q1 N → H1 retour neutre'},
      ]
    },
    steps_cabler:[
@@ -526,42 +553,41 @@ levels:[
 {id:'impulsion',icon:'&#128276;',titre:'Commande par impulsion',desc:'Télérupteur, minuterie, temporisation...',
 levels:[
   {id:'L04',titre:'Télérupteur',diff:'moyen',xp:70,
-   desc:'3 boutons poussoirs commandent une lampe par impulsions via un télérupteur.',
+   desc:'3 BP commandent une lampe par impulsions. Q1 bipolaire. 2 circuits : commande (BP→bobine) et puissance (contact→lampe).',
    modes:['observer','colorier','cabler'],
    schema:{
-     // bp_no_marche: top(0,-21), bottom(0,21)
-     // telerupteur: top(0,-20), bottom(0,20)
+     // Q1 à (300,240) : Phase=310, Neutre=290
      syms:[
-       {s:'source_phase_l',  x:300, y:140, r:1, label:'Phase L'},
-       {s:'source_neutre_n', x:520, y:140, r:1, label:'Neutre N'},
-       {s:'disjoncteur_1p',  x:300, y:260, r:0, label:'Q1'},
-       {s:'bp_no_marche',    x:180, y:420, r:0, label:'S1'},
-       {s:'bp_no_marche',    x:300, y:420, r:0, label:'S2'},
-       {s:'bp_no_marche',    x:420, y:420, r:0, label:'S3'},
-       {s:'bobine_contacteur',x:300, y:560, r:0, label:'Bobine TE1'},
-       {s:'contact_no',      x:180, y:680, r:0, label:'Contact TE1'},
-       {s:'voyant_lumineux', x:180, y:800, r:0, label:'H1'},
+       {s:'source_phase_l',   x:310, y:120, r:1, label:'Phase L'},
+       {s:'source_neutre_n',  x:290, y:120, r:1, label:'Neutre N'},
+       {s:'disjoncteur_1p_n', x:300, y:240, r:0, label:'Q1 (bipolaire)'},
+       {s:'bp_no_marche',     x:200, y:400, r:0, label:'S1'},
+       {s:'bp_no_marche',     x:310, y:400, r:0, label:'S2'},
+       {s:'bp_no_marche',     x:420, y:400, r:0, label:'S3'},
+       {s:'bobine_contacteur',x:310, y:540, r:0, label:'Bobine TE1'},
+       {s:'contact_no',       x:160, y:640, r:0, label:'Contact TE1'},
+       {s:'voyant_lumineux',  x:160, y:780, r:0, label:'H1'},
      ],
      wires:[
-       // Phase → Q1
-       {pts:[{x:300,y:150},{x:300,y:230}],expected:'phase_l1',label:'Phase L → Q1'},
-       // Q1 → noeud distribution
-       {pts:[{x:300,y:280},{x:300,y:360}],expected:'phase_l1',label:'Q1 → noeud'},
-       // Noeud → 3 BP en parallèle (entrées)
-       {pts:[{x:300,y:360},{x:180,y:360},{x:180,y:399}],expected:'phase_l1',label:'→ S1 (entrée)'},
-       {pts:[{x:300,y:360},{x:300,y:399}],expected:'phase_l1',label:'→ S2 (entrée)'},
-       {pts:[{x:300,y:360},{x:420,y:360},{x:420,y:399}],expected:'phase_l1',label:'→ S3 (entrée)'},
-       // 3 BP sorties → noeud commun → bobine TE1
-       {pts:[{x:180,y:441},{x:180,y:500},{x:300,y:500}],expected:'cmd_24v',label:'S1 → bobine TE1'},
-       {pts:[{x:300,y:441},{x:300,y:500}],expected:'cmd_24v',label:'S2 → bobine TE1'},
-       {pts:[{x:420,y:441},{x:420,y:500},{x:300,y:500}],expected:'cmd_24v',label:'S3 → bobine TE1'},
-       {pts:[{x:300,y:500},{x:300,y:540}],expected:'cmd_24v',label:'Noeud → bobine TE1'},
-       // Circuit lampe : Phase → contact TE1 → H1
-       {pts:[{x:180,y:360},{x:180,y:360},{x:120,y:360},{x:120,y:660},{x:180,y:660}],expected:'phase_l1',label:'Phase → contact TE1'},
-       {pts:[{x:180,y:700},{x:180,y:780}],expected:'phase_l1',label:'Contact TE1 → H1'},
-       // Neutres retour
-       {pts:[{x:300,y:580},{x:300,y:620},{x:520,y:620},{x:520,y:150}],expected:'neutre',label:'Neutre bobine retour'},
-       {pts:[{x:180,y:820},{x:180,y:860},{x:520,y:860},{x:520,y:620}],expected:'neutre',label:'Neutre H1 retour'},
+       {pts:[{x:310,y:130},{x:310,y:210}],expected:'phase_l1',label:'Phase L → Q1 (entrée Ph)'},
+       {pts:[{x:290,y:130},{x:290,y:210}],expected:'neutre',label:'Neutre N → Q1 (entrée N)'},
+       // Q1 Ph out → noeud distribution
+       {pts:[{x:310,y:260},{x:310,y:340}],expected:'phase_l1',label:'Q1 Ph → noeud'},
+       // Noeud → 3 BP en parallèle
+       {pts:[{x:310,y:340},{x:200,y:340},{x:200,y:379}],expected:'phase_l1',label:'Noeud → S1'},
+       {pts:[{x:310,y:340},{x:310,y:379}],expected:'phase_l1',label:'Noeud → S2'},
+       {pts:[{x:310,y:340},{x:420,y:340},{x:420,y:379}],expected:'phase_l1',label:'Noeud → S3'},
+       // 3 BP → noeud commun → bobine
+       {pts:[{x:200,y:421},{x:200,y:500},{x:310,y:500}],expected:'cmd_24v',label:'S1 → noeud bobine'},
+       {pts:[{x:310,y:421},{x:310,y:500}],expected:'cmd_24v',label:'S2 → noeud bobine'},
+       {pts:[{x:420,y:421},{x:420,y:500},{x:310,y:500}],expected:'cmd_24v',label:'S3 → noeud bobine'},
+       {pts:[{x:310,y:500},{x:310,y:520}],expected:'cmd_24v',label:'Noeud → bobine TE1'},
+       // Circuit puissance : Phase → contact TE1 → H1
+       {pts:[{x:310,y:340},{x:120,y:340},{x:120,y:620},{x:160,y:620}],expected:'phase_l1',label:'Phase → contact TE1'},
+       {pts:[{x:160,y:660},{x:160,y:760}],expected:'phase_l1',label:'Contact TE1 → H1'},
+       // Neutres retour (Q1 N)
+       {pts:[{x:290,y:260},{x:290,y:560},{x:310,y:560}],expected:'neutre',label:'Q1 N → bobine retour'},
+       {pts:[{x:290,y:560},{x:290,y:800},{x:160,y:800}],expected:'neutre',label:'Q1 N → H1 retour'},
      ]
    },
    steps_cabler:[
@@ -744,110 +770,142 @@ levels:[
 {id:'froid',icon:'&#10052;',titre:'Froid & climatique',desc:'Pressostats, thermostat, pump down, dégivrage...',
 levels:[
   {id:'L09',titre:'Circuit frigo simple',diff:'moyen',xp:90,
-   desc:'Thermostat + pressostat BP en série commandent le contacteur du compresseur.',
+   desc:'Thermostat + pressostat BP + pressostat HP en série commandent le contacteur compresseur. Q1 bipolaire.',
    modes:['observer','colorier','cabler'],
    schema:{
+     // Q1 à (250,240) : Phase=260, Neutre=240
      syms:[
-       {s:'source_1p_n',x:200,y:160,r:3,label:'Source'},
-       {s:'disjoncteur_1p_n',x:200,y:280,r:0,label:'Q1'},
-       {s:'thermostat_nf',x:200,y:400,r:0,label:'B1 Therm.'},
-       {s:'pressostat_nf',x:200,y:500,r:0,label:'B2 Press.BP'},
-       {s:'bobine_contacteur',x:200,y:620,r:0,label:'KM1'},
-       {s:'voyant_vert',x:340,y:620,r:0,label:'H1 Marche'},
+       {s:'source_phase_l',   x:260, y:120, r:1, label:'Phase L'},
+       {s:'source_neutre_n',  x:240, y:120, r:1, label:'Neutre N'},
+       {s:'disjoncteur_1p_n', x:250, y:240, r:0, label:'Q1 (bipolaire)'},
+       {s:'thermostat_nf',    x:260, y:380, r:0, label:'B1 Thermostat'},
+       {s:'pressostat_nf',    x:260, y:500, r:0, label:'B2 Pressostat BP (NF)'},
+       {s:'pressostat_nf',    x:260, y:620, r:0, label:'B3 Pressostat HP (NF)'},
+       {s:'bobine_contacteur',x:260, y:760, r:0, label:'KM1 Compresseur'},
+       {s:'voyant_vert',      x:380, y:760, r:0, label:'H1 Marche'},
      ],
      wires:[
-       {pts:[{x:200,y:200},{x:200,y:250}],expected:'phase_l1',label:'Phase→Q1'},
-       {pts:[{x:200,y:310},{x:200,y:380}],expected:'phase_l1',label:'Q1→Thermostat'},
-       {pts:[{x:200,y:420},{x:200,y:480}],expected:'phase_l1',label:'Therm.→Presso BP'},
-       {pts:[{x:200,y:520},{x:200,y:600}],expected:'phase_l1',label:'Presso→KM1'},
-       {pts:[{x:220,y:600},{x:340,y:600}],expected:'phase_l1',label:'→H1'},
-       {pts:[{x:200,y:640},{x:200,y:680},{x:340,y:680},{x:340,y:640}],expected:'neutre',label:'Neutre'},
-       {pts:[{x:340,y:680},{x:400,y:680},{x:400,y:160},{x:220,y:160}],expected:'neutre',label:'Neutre retour'},
+       {pts:[{x:260,y:130},{x:260,y:210}],expected:'phase_l1',label:'Phase L → Q1 (Ph)'},
+       {pts:[{x:240,y:130},{x:240,y:210}],expected:'neutre',label:'Neutre N → Q1 (N)'},
+       {pts:[{x:260,y:260},{x:260,y:360}],expected:'phase_l1',label:'Q1 Ph → Thermostat B1'},
+       {pts:[{x:260,y:395},{x:260,y:480}],expected:'phase_l1',label:'B1 → Pressostat BP B2'},
+       {pts:[{x:260,y:520},{x:260,y:600}],expected:'phase_l1',label:'B2 → Pressostat HP B3'},
+       {pts:[{x:260,y:640},{x:260,y:740}],expected:'phase_l1',label:'B3 → bobine KM1'},
+       {pts:[{x:260,y:740},{x:380,y:740}],expected:'phase_l1',label:'→ voyant H1'},
+       {pts:[{x:240,y:260},{x:240,y:800}],expected:'neutre',label:'Q1 N → rail neutre'},
+       {pts:[{x:260,y:780},{x:260,y:800},{x:240,y:800}],expected:'neutre',label:'KM1 → neutre'},
+       {pts:[{x:380,y:780},{x:380,y:800},{x:240,y:800}],expected:'neutre',label:'H1 → neutre'},
      ]
    },
    steps_cabler:[
-     {text:'Place la source et la protection',check:()=>placed.some(p=>p.symId.includes('source'))&&placed.some(p=>p.symId.includes('disjoncteur'))},
+     {text:'Place les sources L et N + Q1 bipolaire',check:()=>placed.some(p=>p.symId.includes('source'))&&placed.some(p=>p.symId.includes('disjoncteur'))},
      {text:'Place le thermostat de chambre B1 (NF)',check:()=>placed.some(p=>p.symId.includes('thermostat'))},
      {text:'Place le pressostat BP B2 (NF)',check:()=>placed.some(p=>p.symId.includes('pressostat'))},
-     {text:'Place la bobine du contacteur KM1',check:()=>placed.some(p=>p.symId.includes('bobine'))},
-     {text:'Câble en série : therm. → presso → bobine',check:()=>wires.length>=4},
+     {text:'Place le pressostat HP B3 (NF)',check:()=>placed.filter(p=>p.symId.includes('pressostat')).length>=2},
+     {text:'Place la bobine KM1 compresseur',check:()=>placed.some(p=>p.symId.includes('bobine'))},
+     {text:'Câble en série : Q1 → B1 → B2 → B3 → KM1',check:()=>wires.length>=5},
    ],
-   hint:'Thermostat et pressostat BP sont des contacts NF en série. Si l\'un s\'ouvre, le compresseur s\'arrête.',
+   hint:'Chaîne série NF : thermostat → pressostat BP → pressostat HP → bobine. Si un seul capteur ouvre, le compresseur s\'arrête.',
   },
   {id:'L10',titre:'Pump Down',diff:'difficile',xp:130,
-   desc:'L\'électrovanne est pilotée par le thermostat. Le pressostat BP fait le pump down du compresseur.',
+   desc:'Le thermostat pilote l\'électrovanne. Le pressostat BP fait le pump down. Q1 bipolaire. 2 circuits parallèles.',
    modes:['observer','colorier','cabler'],
    schema:{
+     // Q1 à (300,220) : Phase=310, Neutre=290
+     // 2 circuits parallèles après Q1 :
+     // Circuit EV : Q1 Ph → thermostat → bobine EV
+     // Circuit compresseur : Q1 Ph → pressostat BP → pressostat HP → bobine KM1
      syms:[
-       {s:'source_1p_n',x:200,y:120,r:3,label:'Source'},
-       {s:'disjoncteur_1p_n',x:200,y:240,r:0,label:'Q1'},
-       {s:'thermostat_nf',x:200,y:360,r:0,label:'B1 Therm.'},
-       {s:'bobine_contacteur',x:200,y:480,r:0,label:'EV'},
-       {s:'pressostat_nf',x:400,y:360,r:0,label:'B2 Press.BP'},
-       {s:'pressostat_nf',x:400,y:460,r:0,label:'B3 Press.HP'},
-       {s:'bobine_contacteur',x:400,y:580,r:0,label:'KM1 Comp.'},
-       {s:'voyant_vert',x:500,y:580,r:0,label:'H1'},
+       {s:'source_phase_l',   x:310, y:100, r:1, label:'Phase L'},
+       {s:'source_neutre_n',  x:290, y:100, r:1, label:'Neutre N'},
+       {s:'disjoncteur_1p_n', x:300, y:220, r:0, label:'Q1 (bipolaire)'},
+       {s:'thermostat_nf',    x:200, y:380, r:0, label:'B1 Thermostat'},
+       {s:'bobine_contacteur',x:200, y:520, r:0, label:'Bobine EV'},
+       {s:'pressostat_nf',    x:420, y:380, r:0, label:'B2 Pressostat BP'},
+       {s:'pressostat_nf',    x:420, y:500, r:0, label:'B3 Pressostat HP'},
+       {s:'bobine_contacteur',x:420, y:640, r:0, label:'KM1 Compresseur'},
+       {s:'voyant_vert',      x:520, y:640, r:0, label:'H1 Marche'},
      ],
      wires:[
-       {pts:[{x:200,y:160},{x:200,y:210}],expected:'phase_l1',label:'Phase→Q1'},
-       {pts:[{x:200,y:270},{x:200,y:340}],expected:'phase_l1',label:'Q1→Therm.'},
-       {pts:[{x:200,y:380},{x:200,y:460}],expected:'phase_l1',label:'Therm.→EV'},
-       {pts:[{x:200,y:270},{x:200,y:300},{x:400,y:300},{x:400,y:340}],expected:'phase_l1',label:'Q1→Presso BP'},
-       {pts:[{x:400,y:380},{x:400,y:440}],expected:'phase_l1',label:'BP→HP'},
-       {pts:[{x:400,y:480},{x:400,y:560}],expected:'phase_l1',label:'HP→KM1'},
-       {pts:[{x:420,y:560},{x:500,y:560}],expected:'phase_l1',label:'→H1'},
-       {pts:[{x:200,y:500},{x:200,y:540},{x:500,y:540},{x:500,y:600}],expected:'neutre',label:'Neutre EV/H1'},
-       {pts:[{x:400,y:600},{x:400,y:640},{x:500,y:640},{x:560,y:640},{x:560,y:120},{x:220,y:120}],expected:'neutre',label:'Neutre retour'},
+       {pts:[{x:310,y:110},{x:310,y:190}],expected:'phase_l1',label:'Phase L → Q1 (Ph)'},
+       {pts:[{x:290,y:110},{x:290,y:190}],expected:'neutre',label:'Neutre N → Q1 (N)'},
+       // Q1 Ph (310,240) → noeud de distribution
+       {pts:[{x:310,y:240},{x:310,y:320}],expected:'phase_l1',label:'Q1 Ph → noeud'},
+       // Branche EV : noeud → thermostat → EV
+       {pts:[{x:310,y:320},{x:200,y:320},{x:200,y:360}],expected:'phase_l1',label:'Noeud → thermostat B1'},
+       {pts:[{x:200,y:395},{x:200,y:500}],expected:'phase_l1',label:'B1 → bobine EV'},
+       // Branche compresseur : noeud → presso BP → HP → KM1
+       {pts:[{x:310,y:320},{x:420,y:320},{x:420,y:360}],expected:'phase_l1',label:'Noeud → pressostat BP B2'},
+       {pts:[{x:420,y:400},{x:420,y:480}],expected:'phase_l1',label:'B2 → pressostat HP B3'},
+       {pts:[{x:420,y:520},{x:420,y:620}],expected:'phase_l1',label:'B3 → bobine KM1'},
+       {pts:[{x:420,y:620},{x:520,y:620}],expected:'phase_l1',label:'→ voyant H1'},
+       // Neutres retour
+       {pts:[{x:290,y:240},{x:290,y:700}],expected:'neutre',label:'Q1 N → rail neutre'},
+       {pts:[{x:200,y:540},{x:200,y:700},{x:290,y:700}],expected:'neutre',label:'EV → neutre'},
+       {pts:[{x:420,y:660},{x:420,y:700},{x:290,y:700}],expected:'neutre',label:'KM1 → neutre'},
+       {pts:[{x:520,y:660},{x:520,y:700},{x:290,y:700}],expected:'neutre',label:'H1 → neutre'},
      ]
    },
    steps_cabler:[
-     {text:'Place la source et la protection',check:()=>placed.some(p=>p.symId.includes('source'))&&placed.some(p=>p.symId.includes('disjoncteur'))},
-     {text:'Circuit EV : thermostat → électrovanne (bobine)',check:()=>placed.some(p=>p.symId.includes('thermostat'))},
-     {text:'Circuit compresseur : pressostat BP → pressostat HP → bobine KM1',check:()=>placed.filter(p=>p.symId.includes('pressostat')||p.symId.includes('capteur')).length>=2},
-     {text:'Place la bobine EV et la bobine KM1',check:()=>placed.filter(p=>p.symId.includes('bobine')).length>=2},
-     {text:'Câble les 2 circuits indépendants',check:()=>wires.length>=6},
+     {text:'Place les sources L/N + Q1 bipolaire',check:()=>placed.some(p=>p.symId.includes('source'))&&placed.some(p=>p.symId.includes('disjoncteur'))},
+     {text:'Circuit EV : thermostat B1 → bobine EV',check:()=>placed.some(p=>p.symId.includes('thermostat'))},
+     {text:'Circuit compresseur : B2 (BP) → B3 (HP) → KM1',check:()=>placed.filter(p=>p.symId.includes('pressostat')).length>=2},
+     {text:'Place 2 bobines (EV + KM1)',check:()=>placed.filter(p=>p.symId.includes('bobine')).length>=2},
+     {text:'Câble les 2 circuits parallèles',check:()=>wires.length>=8},
    ],
-   hint:'2 circuits parallèles après Q1 : 1) Therm.→EV et 2) Presso BP→HP→KM1. Quand le therm. coupe, l\'EV se ferme, la pression descend, le BP coupe KM1.',
+   hint:'2 circuits parallèles depuis Q1 : à gauche thermostat→EV, à droite pressostat BP→HP→KM1. Quand B1 coupe, l\'EV ferme, la BP descend, B2 coupe KM1 = pump down.',
   },
 ]},
-{id:'tp',icon:'&#128736;',titre:'TP spéciaux',desc:'Étoile-triangle, dégivrage, régulation pressostatique...',
+{id:'tp',icon:'&#128736;',titre:'TP spéciaux',desc:'Étoile-triangle, dégivrage, régulation...',
 levels:[
-  {id:'L11',titre:'Étoile-Triangle',diff:'expert',xp:160,
-   desc:'Démarrage en étoile puis basculement en triangle après temporisation.',
-   modes:['observer','colorier','cabler'],
+  {id:'L11',titre:'Étoile-Triangle (puissance)',diff:'expert',xp:160,
+   desc:'Démarrage étoile puis triangle. 3 contacteurs : KM1 étoile, KM2 ligne, KM3 triangle. Le moteur a 6 bornes (U1V1W1 + U2V2W2).',
+   modes:['observer','cabler'],
    schema:{
+     // Schéma simplifié puissance Y/Δ
+     // Q1 sectionneur → KM2(ligne) → F1 → M1
+     // KM1(étoile) court-circuite U2-V2-W2
+     // KM3(triangle) connecte U2→L1, V2→L2, W2→L3
      syms:[
-       {s:'source_3p',x:300,y:100,r:3,label:'3~'},
-       {s:'sectionneur_3p',x:300,y:220,r:0,label:'Q1'},
-       {s:'contact_puissance_3p_no',x:300,y:360,r:0,label:'KM2 Ligne'},
-       {s:'relais_thermique',x:300,y:480,r:0,label:'F1'},
-       {s:'contact_puissance_3p_no',x:160,y:600,r:0,label:'KM1 Étoile'},
-       {s:'contact_puissance_3p_no',x:440,y:600,r:0,label:'KM3 Triangle'},
-       {s:'moteur_triphase',x:300,y:740,r:0,label:'M1'},
+       {s:'source_phase_l',  x:280, y:100, r:1, label:'L1'},
+       {s:'source_phase_l',  x:310, y:100, r:1, label:'L2'},
+       {s:'source_phase_l',  x:340, y:100, r:1, label:'L3'},
+       {s:'sectionneur_3p',  x:310, y:260, r:0, label:'Q1 Sectionneur'},
+       {s:'contact_puissance_3p_no',x:280, y:420, r:0, label:'KM2 Ligne L1'},
+       {s:'contact_puissance_3p_no',x:310, y:420, r:0, label:'KM2 Ligne L2'},
+       {s:'contact_puissance_3p_no',x:340, y:420, r:0, label:'KM2 Ligne L3'},
+       {s:'relais_thermique', x:290, y:560, r:0, label:'F1'},
+       {s:'moteur_triphase',  x:310, y:720, r:0, label:'M1 (6 bornes)'},
+       {s:'contact_puissance_3p_no',x:160, y:700, r:0, label:'KM1 Étoile'},
+       {s:'contact_puissance_3p_no',x:460, y:700, r:0, label:'KM3 Triangle'},
      ],
      wires:[
-       {pts:[{x:280,y:140},{x:280,y:190}],expected:'phase_l1',label:'L1'},
-       {pts:[{x:300,y:140},{x:300,y:190}],expected:'phase_l2',label:'L2'},
-       {pts:[{x:320,y:140},{x:320,y:190}],expected:'phase_l3',label:'L3'},
-       {pts:[{x:280,y:250},{x:280,y:330}],expected:'phase_l1',label:'Q1→KM2'},
-       {pts:[{x:300,y:250},{x:300,y:330}],expected:'phase_l2',label:'Q1→KM2'},
-       {pts:[{x:320,y:250},{x:320,y:330}],expected:'phase_l3',label:'Q1→KM2'},
-       {pts:[{x:280,y:390},{x:280,y:450}],expected:'phase_l1',label:'KM2→F1'},
-       {pts:[{x:300,y:390},{x:300,y:450}],expected:'phase_l2',label:'KM2→F1'},
-       {pts:[{x:320,y:390},{x:320,y:450}],expected:'phase_l3',label:'KM2→F1'},
-       {pts:[{x:280,y:510},{x:280,y:710}],expected:'phase_l1',label:'F1→M1(U)'},
-       {pts:[{x:300,y:510},{x:300,y:710}],expected:'phase_l2',label:'F1→M1(V)'},
-       {pts:[{x:320,y:510},{x:320,y:710}],expected:'phase_l3',label:'F1→M1(W)'},
+       // Sources → Q1
+       {pts:[{x:280,y:110},{x:280,y:220},{x:290,y:220},{x:290,y:240}],expected:'phase_l1',label:'L1 → Q1'},
+       {pts:[{x:310,y:110},{x:310,y:240}],expected:'phase_l2',label:'L2 → Q1'},
+       {pts:[{x:340,y:110},{x:340,y:220},{x:330,y:220},{x:330,y:240}],expected:'phase_l3',label:'L3 → Q1'},
+       // Q1 → KM2 (ligne)
+       {pts:[{x:290,y:280},{x:280,y:280},{x:280,y:400}],expected:'phase_l1',label:'Q1 → KM2 L1'},
+       {pts:[{x:310,y:280},{x:310,y:400}],expected:'phase_l2',label:'Q1 → KM2 L2'},
+       {pts:[{x:330,y:280},{x:340,y:280},{x:340,y:400}],expected:'phase_l3',label:'Q1 → KM2 L3'},
+       // KM2 → F1
+       {pts:[{x:280,y:440},{x:280,y:520},{x:290,y:520},{x:290,y:539}],expected:'phase_l1',label:'KM2 → F1 L1'},
+       {pts:[{x:310,y:440},{x:310,y:520},{x:300,y:520},{x:300,y:539}],expected:'phase_l2',label:'KM2 → F1 L2'},
+       {pts:[{x:340,y:440},{x:340,y:520},{x:310,y:520},{x:310,y:539}],expected:'phase_l3',label:'KM2 → F1 L3'},
+       // F1 → M1 (U1 V1 W1)
+       {pts:[{x:290,y:581},{x:290,y:690}],expected:'phase_l1',label:'F1 → M1 U1'},
+       {pts:[{x:300,y:581},{x:300,y:660},{x:310,y:660},{x:310,y:690}],expected:'phase_l2',label:'F1 → M1 V1'},
+       {pts:[{x:310,y:581},{x:310,y:640},{x:330,y:640},{x:330,y:690}],expected:'phase_l3',label:'F1 → M1 W1'},
      ]
    },
    steps_cabler:[
-     {text:'Place source + sectionneur Q1',check:()=>placed.some(p=>p.symId.includes('source'))&&placed.some(p=>p.symId.includes('sectionneur'))},
-     {text:'Place KM2 (ligne) + F1',check:()=>placed.some(p=>p.symId.includes('contact_puissance'))&&placed.some(p=>p.symId.includes('relais'))},
-     {text:'Place KM1 (étoile) et KM3 (triangle)',check:()=>placed.filter(p=>p.symId.includes('contact_puissance')).length>=3},
+     {text:'Place 3 sources L1/L2/L3 + sectionneur Q1',check:()=>placed.filter(p=>p.symId.includes('source')).length>=3&&placed.some(p=>p.symId.includes('sectionneur'))},
+     {text:'Place 3 contacts KM2 (ligne) + relais F1',check:()=>placed.filter(p=>p.symId.includes('contact_puissance')).length>=3&&placed.some(p=>p.symId.includes('relais'))},
      {text:'Place le moteur M1',check:()=>placed.some(p=>p.symId.includes('moteur'))},
-     {text:'Câble le circuit',check:()=>wires.length>=9},
+     {text:'Place KM1 (étoile) et KM3 (triangle)',check:()=>placed.filter(p=>p.symId.includes('contact_puissance')).length>=5},
+     {text:'Câble les 3 phases Q1→KM2→F1→M1',check:()=>wires.length>=9},
    ],
-   hint:'KM2(ligne) est toujours en série. Au démarrage KM1 court-circuite les bornes moteur (étoile). Après tempo, KM1 s\'ouvre et KM3 connecte en triangle.',
+   hint:'Chaîne puissance : L1/L2/L3 → Q1 → KM2(ligne, toujours fermé en marche) → F1 → M1(U1/V1/W1). KM1 relie U2-V2-W2 ensemble (étoile). KM3 connecte U2→L1, V2→L2, W2→L3 (triangle). KM1 et KM3 ne sont jamais fermés en même temps.',
   },
 ]},
 ];
@@ -1001,7 +1059,7 @@ function loadPlayer(){
   }catch(e){}
   addXP(0);
 }
-function isUnlocked(id){for(const w of WORLDS){if(w.levels[0]?.id===id)return true;for(let i=1;i<w.levels.length;i++){if(w.levels[i].id===id)return!!player.completed[w.levels[i-1].id]}}return true}
+function isUnlocked(id){return true} // Navigation libre — tous les niveaux accessibles
 function getStars(id){return player.completed[id]?.stars||0}
 
 // ===== MAP =====
