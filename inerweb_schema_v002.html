@@ -15,7 +15,7 @@
   --neutre:#2980b9;--pe:#27ae60;--cmd-24v:#e74c3c;--cmd-retour:#3498db;
   --radius:10px;
 }
-html,body{height:100%;overflow:hidden;font-family:'Segoe UI',Calibri,sans-serif;background:var(--bg);color:var(--navy)}
+html,body{height:100%;overflow:hidden;font-family:Calibri,'Segoe UI',sans-serif;font-size:14px;line-height:1.5;background:var(--bg);color:var(--navy);text-align:left}
 
 /* ===== SPLASH ===== */
 #splash{position:fixed;inset:0;background:linear-gradient(135deg,#1b3a63,#2c5f9e);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;transition:opacity .5s}
@@ -51,8 +51,8 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',Calibri,sans-serif;
 #map-screen{display:none;width:100%;height:100%;overflow-y:auto;padding:20px;background:linear-gradient(180deg,#f5f5f0,#e8e5dc)}
 #map-screen.on{display:block}
 .map-header{text-align:center;margin-bottom:20px}
-.map-header h2{font-size:20px;margin-bottom:4px}
-.map-header p{font-size:12px;color:#888;margin-bottom:10px}
+.map-header h2{font-size:22px;font-family:'Trebuchet MS',sans-serif;margin-bottom:4px}
+.map-header p{font-size:14px;color:#888;margin-bottom:10px}
 .map-section{max-width:960px;margin:0 auto 24px}
 .map-section h2{font-size:16px;display:flex;align-items:center;gap:6px;margin-bottom:3px}
 .map-section .desc{font-size:12px;color:#888;margin-bottom:10px}
@@ -62,8 +62,8 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',Calibri,sans-serif;
 .level-card.locked{opacity:.45;cursor:not-allowed;filter:grayscale(.2)}
 .level-card.locked:hover{transform:none;box-shadow:none;border-color:#e0ddd5}
 .level-card.done{border-color:var(--success)}
-.level-card h4{font-size:13px;margin-bottom:3px}
-.level-card p{font-size:10px;color:#777;line-height:1.3;margin-bottom:6px}
+.level-card h4{font-size:15px;font-family:'Trebuchet MS',sans-serif;margin-bottom:3px}
+.level-card p{font-size:14px;color:#777;line-height:1.5;margin-bottom:6px}
 .level-card .stars{display:flex;gap:1px;font-size:14px}
 .star-on{color:var(--gold)}.star-off{color:#ddd}
 .level-card .lock{position:absolute;top:6px;right:8px;font-size:16px;opacity:.25}
@@ -134,9 +134,9 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',Calibri,sans-serif;
 .panel-header h3{font-size:13px;flex:1}
 .panel-close{background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:0 4px}
 .panel-body{flex:1;overflow-y:auto;padding:14px}
-.panel-body .desc{font-size:12px;color:#555;line-height:1.5;margin-bottom:12px}
+.panel-body .desc{font-size:14px;color:#555;line-height:1.5;margin-bottom:12px}
 .panel-actions{padding:10px 14px;border-top:1px solid #eee;display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
-.btn{padding:6px 14px;border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600;font-family:inherit;transition:.12s}
+.btn{padding:7px 16px;border:none;border-radius:6px;font-size:14px;cursor:pointer;font-weight:600;font-family:Calibri,'Segoe UI',sans-serif;transition:.12s}
 .btn:hover{filter:brightness(1.1)}
 .btn-primary{background:var(--orange);color:#fff}
 .btn-success{background:var(--success);color:#fff}
@@ -144,7 +144,7 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',Calibri,sans-serif;
 .btn-sm{padding:4px 8px;font-size:10px}
 
 /* Steps */
-.step{display:flex;align-items:flex-start;gap:7px;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:11px}
+.step{display:flex;align-items:flex-start;gap:7px;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:14px}
 .step-num{width:20px;height:20px;border:2px solid #ddd;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
 .step-num.done{border-color:var(--success);background:var(--success);color:#fff}
 .step-num.current{border-color:var(--orange);color:var(--orange)}
@@ -220,21 +220,22 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',Calibri,sans-serif;
 <body>
 
 <!-- ===== LOGIN SCREEN ===== -->
-<div id="login-screen" style="position:fixed;inset:0;background:linear-gradient(135deg,#1b3a63,#2c5f9e);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;transition:opacity .5s">
-  <div style="font-size:56px;filter:drop-shadow(0 4px 12px rgba(0,0,0,.3))">&#9889;</div>
-  <h1 style="font-size:clamp(24px,4vw,36px);margin:8px 0 4px;text-shadow:0 2px 8px rgba(0,0,0,.3)">inerWeb Schéma</h1>
-  <div style="font-size:13px;opacity:.7;margin-bottom:20px;text-align:center">Compagnon Électrotechnique &middot; LP Jacques Raynaud</div>
-  <div style="background:rgba(255,255,255,.1);border-radius:14px;padding:24px;width:90vw;max-width:340px;backdrop-filter:blur(6px)">
+<div id="login-screen" style="position:fixed;inset:0;background:linear-gradient(135deg,#f5f5f0,#e8e5dc);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#1b3a63;transition:opacity .5s">
+  <div style="font-size:48px">&#10052;</div>
+  <h1 style="font-size:clamp(22px,4vw,32px);margin:8px 0 2px;font-family:'Trebuchet MS',Trebuchet,sans-serif;font-weight:bold">inerWeb <span style="background:#ff6b35;color:#fff;padding:2px 10px;border-radius:6px;font-size:.7em">Édu</span></h1>
+  <div style="font-size:14px;color:#ff6b35;font-weight:700;margin-bottom:4px">Schéma — Compagnon Électrotechnique</div>
+  <div style="font-size:12px;opacity:.5;margin-bottom:16px">par F. Henninot &middot; LP Jacques Raynaud</div>
+  <div style="background:#fff;border:2px solid #1b3a63;border-radius:14px;padding:24px;width:90vw;max-width:340px;box-shadow:0 4px 20px rgba(0,0,0,.08)">
     <div style="margin-bottom:12px">
-      <label style="font-size:11px;display:block;margin-bottom:3px;opacity:.7">Nom</label>
+      <label style="font-size:14px;display:block;margin-bottom:3px;color:#1b3a63;font-weight:600">Nom</label>
       <input id="login-nom" type="text" style="width:100%;padding:8px 12px;border:none;border-radius:6px;font-size:14px;font-family:inherit;background:rgba(255,255,255,.9);color:#1b3a63" placeholder="DUPONT" autocomplete="off">
     </div>
     <div style="margin-bottom:12px">
-      <label style="font-size:11px;display:block;margin-bottom:3px;opacity:.7">Prénom</label>
+      <label style="font-size:14px;display:block;margin-bottom:3px;color:#1b3a63;font-weight:600">Prénom</label>
       <input id="login-prenom" type="text" style="width:100%;padding:8px 12px;border:none;border-radius:6px;font-size:14px;font-family:inherit;background:rgba(255,255,255,.9);color:#1b3a63" placeholder="Jean" autocomplete="off">
     </div>
     <div style="margin-bottom:16px">
-      <label style="font-size:11px;display:block;margin-bottom:3px;opacity:.7">Classe</label>
+      <label style="font-size:14px;display:block;margin-bottom:3px;color:#1b3a63;font-weight:600">Classe</label>
       <select id="login-classe" style="width:100%;padding:8px 12px;border:none;border-radius:6px;font-size:14px;font-family:inherit;background:rgba(255,255,255,.9);color:#1b3a63" onchange="if(this.value==='__autre')document.getElementById('login-classe-autre').style.display='block'">
         <option value="">-- Choisis ta classe --</option>
         <option>1re année CAP IFCA</option>
@@ -249,10 +250,10 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',Calibri,sans-serif;
     </div>
     <button class="splash-btn" style="width:100%;margin:0" onclick="loginAndStart()">&#127891; C'est parti !</button>
     <div style="text-align:center;margin-top:10px">
-      <button style="background:none;border:none;color:rgba(255,255,255,.4);font-size:10px;cursor:pointer;font-family:inherit;text-decoration:underline" onclick="openProf()">&#128274; Espace prof</button>
+      <button style="background:none;border:none;color:#888;font-size:12px;cursor:pointer;font-family:inherit;text-decoration:underline" onclick="openProf()">&#128274; Espace prof</button>
     </div>
   </div>
-  <div style="position:absolute;bottom:14px;font-size:10px;opacity:.4">F. Henninot &middot; LP Jacques Raynaud &middot; v002</div>
+  <div style="position:absolute;bottom:14px;font-size:12px;opacity:.4">F. Henninot &middot; LP Privé Jacques Raynaud &middot; Campus ÉQUATIO &middot; v002</div>
 </div>
 
 <!-- ===== PROF SCREEN ===== -->
@@ -270,8 +271,9 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',Calibri,sans-serif;
 
 <div id="app">
   <div id="topbar">
-    <h1 onclick="showMap()">&#9889; inerWeb Schéma</h1>
-    <span class="badge">Edu</span>
+    <h1 onclick="showMap()" style="font-family:'Trebuchet MS',Trebuchet,sans-serif">&#10052; iner<span style="font-family:'Segoe Script','Brush Script MT',cursive;font-weight:normal">Web</span></h1>
+    <span class="badge">Édu</span>
+    <span style="font-size:11px;opacity:.7">Schéma</span>
     <div class="tb" id="ed-tools" style="display:none">
       <button onclick="showMap()">&#127891; Niveaux</button>
       <span class="sep"></span>
@@ -332,7 +334,7 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',Calibri,sans-serif;
     <span id="st-tool">Sélection</span><span class="sep"></span>
     <span id="st-pos"></span><span class="sep"></span>
     <span id="st-info">Prêt</span>
-    <span style="margin-left:auto;opacity:.3">F. Henninot &middot; LP Jacques Raynaud &middot; v002</span>
+    <span style="margin-left:auto;opacity:.3">par F. Henninot &middot; LP Privé Jacques Raynaud &middot; v002</span>
   </div>
 </div>
 
